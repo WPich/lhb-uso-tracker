@@ -72,7 +72,7 @@
     background:var(--card); border-bottom:1px solid var(--line);
   }
   .tab{
-    flex:1; text-align:center; padding:13px 4px; font-size:13.5px; font-weight:600;
+    flex:1; text-align:center; padding:13px 2px; font-size:12.5px; font-weight:600;
     color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent;
     user-select:none;
   }
@@ -194,6 +194,7 @@
     <div class="tab active" data-tab="checkin">เช็คอิน</div>
     <div class="tab" data-tab="machines">รายการเครื่อง</div>
     <div class="tab" data-tab="summary">สรุปภาพรวม</div>
+    <div class="tab" data-tab="admin">ผู้ดูแลระบบ</div>
   </div>
 
   <!-- CHECK-IN VIEW -->
@@ -220,10 +221,6 @@
     <h2 class="section-title">ประวัติเช็คอิน</h2>
     <div class="card" id="checkinLogWrap">
       <div class="loading">กำลังโหลด…</div>
-    </div>
-
-    <div class="danger-zone">
-      <button id="btnClearAll" type="button">ล้างข้อมูลทดสอบทั้งหมด</button>
     </div>
   </div>
 
@@ -259,6 +256,32 @@
     <div class="card" style="font-size:13px; color:var(--ink-soft); line-height:1.7;">
       ฝั่ง User: ตรวจ USO Extension → Export รหัสผ่าน 13 แอป → บันทึกค่า AS400/Printer → ปิด NetIQ → ตรวจ Login<br>
       ฝั่ง Admin: สลับ Admin → ตั้งค่า AS400/Printer → ถอน NetIQ → ติดตั้ง USO Client → Reboot → สลับ Profile ผู้ใช้ → เปิด SSO Shortcut → Enroll Application (Enable &amp; Save)
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div class="view" id="view-admin">
+    <div id="adminLocked">
+      <h2 class="section-title">เข้าสู่ระบบผู้ดูแล</h2>
+      <div class="card">
+        <label>รหัสผ่านผู้ดูแลระบบ</label>
+        <input type="text" id="adminPasscode" placeholder="กรอกรหัสผ่าน" autocomplete="off">
+        <button class="btn secondary" id="btnAdminUnlock">เข้าสู่ระบบ</button>
+      </div>
+    </div>
+
+    <div id="adminUnlocked" style="display:none;">
+      <h2 class="section-title">ดาวน์โหลดรายงาน</h2>
+      <div class="card">
+        <button class="btn secondary" id="btnExportMachines" style="margin-bottom:10px;">ดาวน์โหลดรายงานเครื่อง (CSV)</button>
+        <button class="btn ghost" id="btnExportCheckins" style="width:100%;">ดาวน์โหลด log เช็คอิน (CSV)</button>
+      </div>
+
+      <h2 class="section-title">จัดการเครื่อง</h2>
+      <div class="card" id="adminMachinesWrap"></div>
+
+      <h2 class="section-title">จัดการประวัติเช็คอิน</h2>
+      <div class="card" id="adminCheckinsWrap"></div>
     </div>
   </div>
 
@@ -331,12 +354,12 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 if (isConfigured) {
   onSnapshot(query(collection(db, 'machines'), orderBy('createdAt', 'desc')), snap => {
     machines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderMachines(); renderSummary(); renderHeaderStats();
+    renderMachines(); renderSummary(); renderHeaderStats(); refreshAdminIfVisible();
   }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
 
   onSnapshot(query(collection(db, 'checkins'), orderBy('ts', 'desc')), snap => {
     checkins = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderCheckins(); renderHeaderStats();
+    renderCheckins(); renderHeaderStats(); refreshAdminIfVisible();
   }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
 } else {
   document.getElementById('checkinLogWrap').innerHTML = '<div class="empty">ตั้งค่า Firebase ก่อนใช้งาน (ดูข้อความด้านบน)</div>';
@@ -407,10 +430,7 @@ function renderCheckins(){
         <div class="who">${escapeHtml(c.staff)}</div>
         <div class="meta">${escapeHtml(c.branch)}${c.note ? ' · '+escapeHtml(c.note) : ''}</div>
       </div>
-      <div class="row-actions">
-        <div class="meta">${fmtTime(c.ts)}</div>
-        <button class="delete-btn" onclick="deleteCheckin('${c.id}')">ลบ</button>
-      </div>
+      <div class="meta">${fmtTime(c.ts)}</div>
     </div>
   `).join('');
 }
@@ -465,10 +485,7 @@ function renderMachines(){
           <div class="machine-id">${escapeHtml(m.computer)}</div>
           <div class="machine-branch">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''}</div>
         </div>
-        <div class="machine-head-actions">
-          <div class="status-pill ${status}">${statusLabel(status)} ${done}/${STEP_DEFS.length}</div>
-          <button class="delete-btn" onclick="event.stopPropagation(); deleteMachine('${m.id}')">ลบ</button>
-        </div>
+        <div class="status-pill ${status}">${statusLabel(status)} ${done}/${STEP_DEFS.length}</div>
       </div>
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="steps-panel ${openPanels.has(m.id)?'open':''}" id="panel-${m.id}">
@@ -524,15 +541,110 @@ window.deleteMachine = async function(id){
   catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
 };
 
-document.getElementById('btnClearAll').addEventListener('click', async ()=>{
-  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
-  if(!confirm('ล้างข้อมูลทั้งหมด (เครื่อง + ประวัติเช็คอิน) ทุกคนที่เปิดหน้านี้จะเห็นข้อมูลว่างเปล่า ยืนยันหรือไม่?')) return;
-  try{
-    await Promise.all(machines.map(m => deleteDoc(doc(db, 'machines', m.id))));
-    await Promise.all(checkins.map(c => deleteDoc(doc(db, 'checkins', c.id))));
-    toast('ล้างข้อมูลทั้งหมดแล้ว');
-  }catch(e){ toast('ล้างข้อมูลไม่สำเร็จ: ' + e.message); }
+// ============================================================
+// ADMIN
+// ============================================================
+const ADMIN_PASSCODE = "lhb-admin-2026"; // เปลี่ยนรหัสนี้ก่อนใช้งานจริง
+
+function checkAdminSession(){
+  if(sessionStorage.getItem('adminUnlocked') === '1'){
+    document.getElementById('adminLocked').style.display = 'none';
+    document.getElementById('adminUnlocked').style.display = 'block';
+    renderAdminLists();
+  }
+}
+
+function refreshAdminIfVisible(){
+  if(document.getElementById('adminUnlocked').style.display !== 'none'){
+    renderAdminLists();
+  }
+}
+
+document.getElementById('btnAdminUnlock').addEventListener('click', ()=>{
+  const val = document.getElementById('adminPasscode').value;
+  if(val === ADMIN_PASSCODE){
+    sessionStorage.setItem('adminUnlocked', '1');
+    document.getElementById('adminLocked').style.display = 'none';
+    document.getElementById('adminUnlocked').style.display = 'block';
+    renderAdminLists();
+    toast('เข้าสู่ระบบผู้ดูแลแล้ว');
+  }else{
+    toast('รหัสผ่านไม่ถูกต้อง');
+  }
 });
+
+function renderAdminLists(){
+  const mWrap = document.getElementById('adminMachinesWrap');
+  const cWrap = document.getElementById('adminCheckinsWrap');
+
+  if(machines.length === 0){
+    mWrap.innerHTML = '<div class="empty">ยังไม่มีเครื่องในระบบ</div>';
+  }else{
+    mWrap.innerHTML = machines.map(m=>{
+      const done = m.steps.filter(Boolean).length;
+      return `
+      <div class="checkin-row">
+        <div>
+          <div class="who">${escapeHtml(m.computer)}</div>
+          <div class="meta">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''} · ${done}/${STEP_DEFS.length} ขั้นตอน</div>
+        </div>
+        <div class="row-actions">
+          <button class="delete-btn" onclick="deleteMachine('${m.id}')">ลบ</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(checkins.length === 0){
+    cWrap.innerHTML = '<div class="empty">ยังไม่มีประวัติเช็คอิน</div>';
+  }else{
+    cWrap.innerHTML = checkins.map(c=>`
+      <div class="checkin-row">
+        <div>
+          <div class="who">${escapeHtml(c.staff)}</div>
+          <div class="meta">${escapeHtml(c.branch)}${c.note ? ' · '+escapeHtml(c.note) : ''} · ${fmtTime(c.ts)}</div>
+        </div>
+        <div class="row-actions">
+          <button class="delete-btn" onclick="deleteCheckin('${c.id}')">ลบ</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(cell => {
+    const s = String(cell ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExportMachines').addEventListener('click', ()=>{
+  const header = ['สาขา','รหัส/ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
+    ...STEP_DEFS.map(s=>s.label)];
+  const rows = machines.map(m=>{
+    const done = m.steps.filter(Boolean).length;
+    return [
+      m.branch, m.computer, m.staff||'', statusLabel(machineStatus(m)), done, STEP_DEFS.length,
+      m.createdAt ? fmtTime(m.createdAt) : '', m.completedAt ? fmtTime(m.completedAt) : '',
+      ...m.steps.map(v => v ? 'เสร็จ' : '-')
+    ];
+  });
+  downloadCsv('uso_machines_report.csv', [header, ...rows]);
+});
+
+document.getElementById('btnExportCheckins').addEventListener('click', ()=>{
+  const header = ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน'];
+  const rows = checkins.map(c => [c.staff, c.branch, c.note||'', fmtTime(c.ts)]);
+  downloadCsv('uso_checkin_log.csv', [header, ...rows]);
+});
+
+checkAdminSession();
 
 // ---- SUMMARY ----
 function renderSummary(){
