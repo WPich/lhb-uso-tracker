@@ -203,8 +203,9 @@
     <div class="card">
       <label>ชื่อผู้ปฏิบัติงาน (Outsource)</label>
       <div class="chip-row" id="staffChips">
-        <div class="chip-btn" data-staff="บุ๋ม (วรรณภา อัครชาติ)">บุ๋ม</div>
-        <div class="chip-btn" data-staff="ซัน (สุกฤษฎิ์ ชมพูพื้น)">ซัน</div>
+        <div class="chip-btn" data-staff="สุกฤษฎิ์ ชมพูพื้น">สุกฤษฎิ์ ชมพูพื้น</div>
+        <div class="chip-btn" data-staff="วรรณภา อัครชาติ">วรรณภา อัครชาติ</div>
+        <div class="chip-btn" data-staff="ณฐกร เกริกสกุล">ณฐกร เกริกสกุล</div>
         <div class="chip-btn" data-staff="__custom">อื่น ๆ</div>
       </div>
       <input type="text" id="customStaff" placeholder="พิมพ์ชื่อผู้ปฏิบัติงาน" style="display:none;">
@@ -233,7 +234,14 @@
       <label>รหัส / ชื่อเครื่อง</label>
       <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04 หรือ ชื่อพนักงานเจ้าของเครื่อง">
       <label>ผู้รับผิดชอบ</label>
-      <input type="text" id="newStaff" placeholder="เช่น บุ๋ม">
+      <select id="newStaffSelect">
+        <option value="">— เลือกผู้รับผิดชอบ —</option>
+        <option value="สุกฤษฎิ์ ชมพูพื้น">สุกฤษฎิ์ ชมพูพื้น</option>
+        <option value="วรรณภา อัครชาติ">วรรณภา อัครชาติ</option>
+        <option value="ณฐกร เกริกสกุล">ณฐกร เกริกสกุล</option>
+        <option value="__custom">อื่น ๆ</option>
+      </select>
+      <input type="text" id="newStaffCustom" placeholder="พิมพ์ชื่อผู้รับผิดชอบ" style="display:none;">
       <button class="btn secondary" id="btnAddMachine">เพิ่มเครื่อง</button>
     </div>
 
@@ -436,11 +444,25 @@ function renderCheckins(){
 }
 
 // ---- MACHINES ----
+document.getElementById('newStaffSelect').addEventListener('change', e=>{
+  const customInput = document.getElementById('newStaffCustom');
+  if(e.target.value === '__custom'){
+    customInput.style.display = 'block';
+    customInput.value = '';
+    customInput.focus();
+  }else{
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+});
+
 document.getElementById('btnAddMachine').addEventListener('click', async ()=>{
   if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
   const branch = document.getElementById('newBranch').value.trim();
   const computer = document.getElementById('newComputer').value.trim();
-  const staff = document.getElementById('newStaff').value.trim();
+  const staffSelect = document.getElementById('newStaffSelect').value;
+  const staffCustom = document.getElementById('newStaffCustom').value.trim();
+  const staff = staffSelect === '__custom' ? staffCustom : staffSelect;
   if(!branch || !computer){ toast('กรุณากรอกสาขาและรหัสเครื่อง'); return; }
   try{
     const id = uid();
@@ -451,7 +473,9 @@ document.getElementById('btnAddMachine').addEventListener('click', async ()=>{
     });
     document.getElementById('newBranch').value='';
     document.getElementById('newComputer').value='';
-    document.getElementById('newStaff').value='';
+    document.getElementById('newStaffSelect').value='';
+    document.getElementById('newStaffCustom').value='';
+    document.getElementById('newStaffCustom').style.display='none';
     toast('เพิ่มเครื่องแล้ว');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
