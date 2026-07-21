@@ -78,6 +78,11 @@
   .step-row input{margin-top:2px; width:18px; height:18px; accent-color:var(--teal); flex-shrink:0;}
   .step-row.checked label{color:var(--ink-soft); text-decoration:line-through;}
   .step-row label{font-weight:500; margin:0; color:var(--ink); font-size:13.8px; cursor:pointer;}
+  .step-row.danger{background:var(--red-bg); border:1.5px solid var(--red); border-radius:9px; padding:10px 11px; margin:8px 0;}
+  .step-row.danger input{accent-color:var(--red);}
+  .step-row.danger label{color:var(--red); font-weight:700;}
+  .step-row.danger.checked label{color:var(--red); opacity:.6;}
+  .step-warn{font-size:11.5px; color:var(--red); line-height:1.55; margin-top:5px; font-weight:600;}
 
   .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
   .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
@@ -198,8 +203,12 @@
       ตรวจ USO Extension → Export รหัสผ่านจาก NetIQ → จดค่า AS400 → ปิด NetIQ → ทดสอบ Login ด้วยมือ
       <br><br>
       <strong style="color:var(--ink);">Section 2 · Admin (ทำครั้งเดียวต่อเครื่อง)</strong><br>
-      สลับ Admin → ตั้งค่า AS400/Printer + Shortcut → Copy Icon ไป Startup → Uninstall NetIQ → Install USO Client → Reboot
-      <br><br>
+      สลับ Admin → ตั้งค่า AS400/Printer + Shortcut → Copy Icon ไป Startup →
+      <span style="color:var(--red); font-weight:700;">Uninstall NetIQ</span> → Install USO Client → Reboot
+      <div style="background:var(--red-bg); border:1.5px solid var(--red); border-radius:9px; padding:10px 11px; margin-top:8px; color:var(--red); font-weight:600; font-size:11.8px; line-height:1.55;">
+        ⚠️ ห้าม Uninstall NetIQ ก่อนเก็บรหัสผ่านครบ — เครื่องสาขาอาจมีผู้ใช้งานหลายคน ต้อง Export User/Password ของ "ทุกคน" ที่ใช้เครื่องนั้นให้เสร็จก่อน ถอนแล้วกู้คืนไม่ได้
+      </div>
+      <br>
       <strong style="color:var(--ink);">Section 3 · User ปกติ (หลัง Reboot — ทำทุกคนที่ใช้เครื่อง)</strong><br>
       สลับกลับ User → เปิด SSO Shortcut → ลงทะเบียน Self Service Portal → Import User/Password → กรอกรหัสครั้งแรก (IBMLogin ก่อน) → ทดสอบ Auto-login → End User ยืนยัน
       <br><br>
@@ -268,13 +277,16 @@ const db = getFirestore(app);
 
 /* ---------------- checklist definitions ---------------- */
 const ADMIN_STEPS = [
-  'เปลี่ยนเป็น User Administrator (TITN005)',
-  'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
-  'Copy Icon SSO ไปที่ Startup folder',
-  'ถอนการติดตั้ง (Uninstall) NetIQ',
-  'ติดตั้ง (Install) USO Client — AllUser',
-  'รีสตาร์ทเครื่อง (Reboot)'
+  { label:'เปลี่ยนเป็น User Administrator (TITN005)' },
+  { label:'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)' },
+  { label:'Copy Icon SSO ไปที่ Startup folder' },
+  { label:'ถอนการติดตั้ง (Uninstall) NetIQ',
+    danger:true,
+    warn:'ห้ามทำก่อนเก็บรหัสผ่านครบ! ต้อง Export User/Password ทุกแอปของผู้ใช้งาน "ทุกคน" ที่ใช้เครื่องนี้ให้เสร็จก่อน (Section 1 ข้อ 2) — ถอนแล้วรหัสผ่านเดิมกู้คืนไม่ได้' },
+  { label:'ติดตั้ง (Install) USO Client — AllUser' },
+  { label:'รีสตาร์ทเครื่อง (Reboot)' }
 ];
+const S1_EXPORT_IDX = 1; // ดัชนีขั้นตอน "Export User/Password จาก NETIQ" ใน Section 1
 const S1 = [
   'ตรวจสอบ USO Extension บน Chrome/Edge',
   'Export User/Password จาก NETIQ ทุกแอปที่ใช้งาน',
@@ -535,11 +547,14 @@ function renderMachines(){
       <div class="progress-track"><div class="progress-fill" style="width:${Math.round(done/total*100)}%"></div></div>
       <div class="steps-panel ${openMachines.has(m.id) ? 'open' : ''}" id="panel-${m.id}">
         <div class="section-divider" style="margin-top:2px;">Section 2 · ติดตั้งเครื่อง (Admin)</div>
-        ${ADMIN_STEPS.map((label,i) => `
-          <div class="step-row ${m.adminSteps[i] ? 'checked' : ''}">
+        ${ADMIN_STEPS.map((s,i) => `
+          <div class="step-row ${s.danger ? 'danger' : ''} ${m.adminSteps[i] ? 'checked' : ''}">
             <input type="checkbox" id="a-${m.id}-${i}" ${m.adminSteps[i] ? 'checked' : ''}
                    data-act="admin-step" data-id="${m.id}" data-i="${i}">
-            <label for="a-${m.id}-${i}">${esc(label)}</label>
+            <div>
+              <label for="a-${m.id}-${i}">${s.danger ? '⚠️ ' : ''}${esc(s.label)}</label>
+              ${s.warn ? `<div class="step-warn">${esc(s.warn)}</div>` : ''}
+            </div>
           </div>`).join('')}
 
         <div class="section-divider">ผู้ใช้งานเครื่องนี้ (Section 1 + 3)</div>
@@ -663,6 +678,30 @@ document.addEventListener('change', async e => {
 
   if(act === 'admin-step'){
     const m = machines.find(x => x.id === id); if(!m) return;
+    const def = ADMIN_STEPS[i];
+
+    /* Safety interlock: uninstalling NetIQ destroys the stored passwords for
+       every user of this shared machine, so confirm the export is done first. */
+    if(def.danger && !m.adminSteps[i]){
+      const kids = logons.filter(l => l.machineId === id);
+      const pending = kids.filter(l => !l.section1[S1_EXPORT_IDX]);
+      let warning = null;
+      if(!kids.length){
+        warning = '⚠️ ยังไม่มีผู้ใช้งานบันทึกไว้ในเครื่องนี้เลย\n\n'
+                + 'เครื่องสาขาอาจมีผู้ใช้งานหลายคน ถ้ายังไม่ได้เก็บรหัสผ่านของทุกคน\n'
+                + 'ถอน NetIQ แล้วจะกู้คืนไม่ได้\n\nยืนยันว่าเก็บ User/Password ครบทุกคนแล้วจริง?';
+      } else if(pending.length){
+        warning = '⚠️ ผู้ใช้งานต่อไปนี้ยังไม่ได้ติ๊ก "Export User/Password จาก NETIQ":\n\n'
+                + pending.map(l => '• ' + l.userName).join('\n')
+                + '\n\nถอน NetIQ แล้วรหัสผ่านเดิมจะกู้คืนไม่ได้\n\nยืนยันจะดำเนินการต่อ?';
+      }
+      if(warning && !confirm(warning)){
+        el.checked = m.adminSteps[i];   // ยกเลิก — คืนค่าช่องติ๊กเดิม
+        toast('ยกเลิกแล้ว — กรุณา Export รหัสผ่านให้ครบก่อน');
+        return;
+      }
+    }
+
     const steps = [...m.adminSteps]; steps[i] = !steps[i];
     const done = steps.filter(Boolean).length;
     try{
@@ -816,7 +855,8 @@ function downloadCsv(filename, rows){
 
 $('btnExportMachines').addEventListener('click', () => {
   downloadCsv('uso_machines_report.csv', [
-    ['สาขา','ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ', ...ADMIN_STEPS],
+    ['สาขา','ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
+     ...ADMIN_STEPS.map(s => s.label)],
     ...machines.map(m => [
       m.branch, m.computer, m.staff, statusLabel(statusOf(machineDone(m), ADMIN_STEPS.length)),
       machineDone(m), ADMIN_STEPS.length, fmtTime(m.createdAt), fmtTime(m.completedAt),
