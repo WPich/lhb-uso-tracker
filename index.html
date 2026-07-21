@@ -205,7 +205,8 @@
       </div>
       <input type="text" id="customStaff" placeholder="พิมพ์ชื่อผู้ปฏิบัติงาน" style="display:none;">
       <label>สาขา / ไซต์งาน</label>
-      <input type="text" id="checkinBranch" placeholder="เช่น สาขาสีลม, HQ ตึก A">
+      <select id="checkinBranchSelect"></select>
+      <input type="text" id="checkinBranchCustom" placeholder="พิมพ์ชื่อสาขา/ไซต์งาน" style="display:none;">
       <label>หมายเหตุ (ถ้ามี)</label>
       <textarea id="checkinNote" rows="2" placeholder="เช่น เริ่มงาน 09:00, รอ IT support เปิดสิทธิ์"></textarea>
       <button class="btn" id="btnCheckin">เช็คอินตอนนี้</button>
@@ -219,7 +220,8 @@
     <h2 class="section-title">เพิ่มเครื่องใหม่</h2>
     <div class="card">
       <label>สาขา</label>
-      <input type="text" id="newBranch" placeholder="เช่น สาขาสีลม">
+      <select id="newBranchSelect"></select>
+      <input type="text" id="newBranchCustom" placeholder="พิมพ์ชื่อสาขา" style="display:none;">
       <label>รหัส / ชื่อเครื่อง</label>
       <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04">
       <label>ผู้รับผิดชอบ (ทีมติดตั้ง)</label>
@@ -239,6 +241,7 @@
     </div>
     <div class="filter-bar">
       <input type="text" id="mSearch" placeholder="🔍 ค้นหา ชื่อเครื่อง / สาขา / ผู้รับผิดชอบ / ชื่อผู้ใช้งาน">
+      <select id="mBranch"><option value="all">ทุกสาขา</option></select>
       <div class="filter-row">
         <select id="mStatus">
           <option value="all">ทุกสถานะ</option>
@@ -470,6 +473,26 @@ const S3 = [
     record:'ผลที่คาดหวัง: User ยืนยันว่าใช้งานได้ปกติ = เสร็จสมบูรณ์' }
 ];
 
+const SITES = {
+  hq: ['HQ','ITSD'],
+  branch: [
+    'Lumpini','Terminal 21','One Bangkok','Saphankhwai','The Old Siam','Lotus Rama 4','Centralworld',
+    'Bangrak','Yaowaraj','Park Lane','Worachak','Big C Onnut','The Paseo Mall','Suksawat',
+    'The Crystal Ekamai Ramindra','Tesco Lotus Srinakarin','Sriracha','Central Rama9',
+    'The Mall Bangkapi','Rayong','Fashion Island','FuturePark Rungsit','Nakhonpathom',
+    'The Mall Ngamwongwan','The Mall Thapra','Pak Chong','Terminal 21 Pattaya','Central Rama3',
+    'Kanchanaburi','Samutsakhon','Hua Hin','Big C Bangna','Megabangna','Amata City',
+    'The Mall BangKae','The Circle Ratchapruk','Khonkaen','Central Pinklao','Lotus North Ratchapruek',
+    'Nakhonsawan','Central Westgate','Central Salaya','Ubon Ratchathani','Ayutthaya City Park',
+    'Central Khonkaen','Phitsanulok','UD Town Udonthani','Terminal 21 Korat','Chiangrai',
+    'Big C Hatyai 2','Tesco Lotus Phuket','Hatyai','Tesco Lotus Ruamchok','Big C Hangdong',
+    'Talat Warorot','Home Pro Chachoengsao','Home Pro Chonburi','Phuket','Home Pro Suvarnaphumi',
+    'Home Pro Saraburi','Suratthani','Home Pro Chumphon','Home Pro Chaiyaphum','Home Pro Roiet',
+    'Home Pro Surin','Nakhon Si Thammarat','Home Pro Lampang'
+  ]
+};
+const ALL_SITES = [...SITES.hq, ...SITES.branch];
+
 const APPS = [
   'Fund Flow','Selling Agent','Internal Blacklist','BDS web','BDS Main','Fee Payment','AS400 (Prod)',
   'E-Form','IBAM','Pinpad Client','CMS (ATM)','eKYC','Collection (New)','FTP Init Parameter'
@@ -491,7 +514,7 @@ let machines = [], logons = [], checkins = [];
 let ready = { machines:false, logons:false, checkins:false };
 let openMachines = new Set(), openLogons = new Set();
 let openDetails = new Set(), openGuide = new Set(['s1']);
-let mFilter = { q:'', status:'all', sort:'newest' };
+let mFilter = { q:'', branch:'all', status:'all', sort:'newest' };
 let machineLimit = 30, checkinLimit = 25;
 const PAGE = 30;
 let photoCache = new Map();      // photoId -> photo doc
@@ -641,13 +664,14 @@ document.querySelectorAll('#staffChips .chip-btn').forEach(chip => {
 $('customStaff').addEventListener('input', e => selectedStaff = e.target.value.trim());
 
 $('btnCheckin').addEventListener('click', async () => {
-  const branch = $('checkinBranch').value.trim();
+  const branch = readBranch('checkinBranchSelect','checkinBranchCustom');
   const note = $('checkinNote').value.trim();
   if(!selectedStaff) return toast('กรุณาเลือกหรือกรอกชื่อผู้ปฏิบัติงาน');
   if(!branch) return toast('กรุณากรอกสาขา/ไซต์งาน');
   try{
     await setDoc(doc(db,'checkins',uid()), { staff:selectedStaff, branch, note, ts:Date.now() });
-    $('checkinBranch').value = ''; $('checkinNote').value = '';
+    resetBranch('checkinBranchSelect','checkinBranchCustom');
+    $('checkinNote').value = '';
     toast('เช็คอินสำเร็จ');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
@@ -682,10 +706,65 @@ function renderCheckins(){
         : '');
 }
 
+/* ---------------- branch pickers ----------------
+   One master list feeds every branch dropdown, so names stay identical across
+   check-ins, machines and the summary grouping instead of drifting per typist. */
+function branchOptionsHtml(){
+  const opt = v => `<option value="${esc(v)}">${esc(v)}</option>`;
+  return '<option value="">— เลือกสาขา / ไซต์งาน —</option>'
+       + '<optgroup label="สำนักงานใหญ่">' + SITES.hq.map(opt).join('') + '</optgroup>'
+       + '<optgroup label="สาขา (' + SITES.branch.length + ')">' + SITES.branch.map(opt).join('') + '</optgroup>'
+       + '<option value="__custom">อื่น ๆ (พิมพ์เอง)</option>';
+}
+/* Wires a select so choosing "อื่น ๆ" reveals a free-text box. */
+function bindBranchPicker(selectId, customId){
+  const sel = $(selectId), custom = $(customId);
+  sel.innerHTML = branchOptionsHtml();
+  sel.addEventListener('change', () => {
+    const on = sel.value === '__custom';
+    custom.style.display = on ? 'block' : 'none';
+    custom.value = '';
+    if(on) custom.focus();
+  });
+}
+function readBranch(selectId, customId){
+  const sel = $(selectId).value;
+  return sel === '__custom' ? $(customId).value.trim() : sel;
+}
+function resetBranch(selectId, customId){
+  $(selectId).value = '';
+  $(customId).value = '';
+  $(customId).style.display = 'none';
+}
+bindBranchPicker('checkinBranchSelect','checkinBranchCustom');
+bindBranchPicker('newBranchSelect','newBranchCustom');
+
+/* The filter dropdown lists only branches that actually have machines, so it
+   does not show 69 empty options on day one. */
+function syncBranchFilter(){
+  const sel = $('mBranch');
+  const present = [...new Set(machines.map(m => m.branch))]
+    .sort((a,b) => a.localeCompare(b,'th'));
+  const signature = present.join('|');
+  if(sel.dataset.sig === signature) return;
+  sel.dataset.sig = signature;
+  const keep = mFilter.branch;
+  sel.innerHTML = '<option value="all">ทุกสาขา (' + present.length + ')</option>'
+    + present.map(b => {
+        const n = machines.filter(m => m.branch === b).length;
+        return `<option value="${esc(b)}">${esc(b)} (${n})</option>`;
+      }).join('');
+  sel.value = present.includes(keep) ? keep : 'all';
+  if(sel.value !== keep) mFilter.branch = sel.value;
+}
+
 /* ---------------- machines: filter controls ----------------
    These inputs live outside #machinesWrap so a re-render never steals focus. */
 $('mSearch').addEventListener('input', e => {
   mFilter.q = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
+});
+$('mBranch').addEventListener('change', e => {
+  mFilter.branch = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
 });
 $('mStatus').addEventListener('change', e => {
   mFilter.status = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
@@ -694,9 +773,10 @@ $('mSort').addEventListener('change', e => {
   mFilter.sort = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
 });
 $('mReset').addEventListener('click', () => {
-  mFilter = { q:'', status:'all', sort:'newest' };
+  mFilter = { q:'', branch:'all', status:'all', sort:'newest' };
   machineLimit = PAGE;
-  $('mSearch').value = ''; $('mStatus').value = 'all'; $('mSort').value = 'newest';
+  $('mSearch').value = ''; $('mBranch').value = 'all';
+  $('mStatus').value = 'all'; $('mSort').value = 'newest';
   safe('renderMachines', renderMachines);
 });
 
@@ -710,7 +790,7 @@ $('newStaffSelect').addEventListener('change', e => {
 });
 
 $('btnAddMachine').addEventListener('click', async () => {
-  const branch = $('newBranch').value.trim();
+  const branch = readBranch('newBranchSelect','newBranchCustom');
   const computer = $('newComputer').value.trim();
   const sel = $('newStaffSelect').value;
   const staff = sel === '__custom' ? $('newStaffCustom').value.trim() : sel;
@@ -721,7 +801,8 @@ $('btnAddMachine').addEventListener('click', async () => {
       adminSteps: ADMIN_STEPS.map(()=>false),
       createdAt: Date.now(), completedAt: null
     });
-    $('newBranch').value = ''; $('newComputer').value = '';
+    resetBranch('newBranchSelect','newBranchCustom');
+    $('newComputer').value = '';
     $('newStaffSelect').value = ''; $('newStaffCustom').value = '';
     $('newStaffCustom').style.display = 'none';
     toast('เพิ่มเครื่องแล้ว');
@@ -742,6 +823,7 @@ function visibleMachines(){
   const q = mFilter.q.trim().toLowerCase();
   let list = machines.filter(m => {
     if(!matchesSearch(m, q)) return false;
+    if(mFilter.branch !== 'all' && m.branch !== mFilter.branch) return false;
     if(mFilter.status === 'all') return true;
     if(mFilter.status === 'legacy') return m.isLegacy;
     return statusOf(machineDone(m), ADMIN_STEPS.length) === mFilter.status;
@@ -768,6 +850,7 @@ function renderMachines(){
     return;
   }
 
+  syncBranchFilter();
   const all = visibleMachines();
   const shown = all.slice(0, machineLimit);
   $('mCount').textContent = all.length === machines.length
