@@ -117,6 +117,26 @@
   .ref-row .v{word-break:break-all; color:var(--ink);}
   .ref-row .v a{color:var(--teal);}
 
+  .filter-bar{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px;}
+  .filter-bar input, .filter-bar select{margin-bottom:8px;}
+  .filter-row{display:flex; gap:8px;}
+  .filter-row select{flex:1; margin-bottom:0;}
+  .filter-count{font-size:11.8px; color:var(--ink-soft); margin-top:9px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .filter-clear{background:none; border:none; color:var(--teal); font-size:11.8px; font-weight:700; cursor:pointer; padding:0;}
+  .load-more{width:100%; background:transparent; color:var(--navy); border:1.5px solid var(--line); padding:11px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; margin-top:4px;}
+  .load-more:hover{border-color:var(--navy);}
+
+  .photo-sec{margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);}
+  .photo-grid{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;}
+  .photo-item{position:relative; width:74px; height:74px; border-radius:8px; overflow:hidden; border:1.5px solid var(--line); background:#eee;}
+  .photo-item img{width:100%; height:100%; object-fit:cover; cursor:pointer; display:block;}
+  .photo-del{position:absolute; top:2px; right:2px; background:rgba(0,0,0,.62); color:#fff; border:none; width:19px; height:19px; border-radius:50%; font-size:12px; line-height:1; cursor:pointer; padding:0;}
+  .photo-add{display:inline-block; border:1.5px dashed var(--teal); color:var(--teal); font-size:12px; font-weight:700; padding:8px 14px; border-radius:9px; cursor:pointer;}
+  .photo-add.busy{opacity:.5; pointer-events:none;}
+  .lightbox{position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:100; display:flex; align-items:center; justify-content:center; padding:16px;}
+  .lightbox img{max-width:100%; max-height:92vh; border-radius:8px;}
+  .lightbox .close{position:absolute; top:14px; right:18px; color:#fff; font-size:30px; background:none; border:none; cursor:pointer; line-height:1;}
+
   .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
   .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
   .logon-head{padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;}
@@ -216,6 +236,27 @@
     <h2 class="section-title">รายการเครื่องทั้งหมด</h2>
     <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">
       1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่อง
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="mSearch" placeholder="🔍 ค้นหา ชื่อเครื่อง / สาขา / ผู้รับผิดชอบ / ชื่อผู้ใช้งาน">
+      <div class="filter-row">
+        <select id="mStatus">
+          <option value="all">ทุกสถานะ</option>
+          <option value="notstarted">ยังไม่เริ่ม</option>
+          <option value="progress">กำลังทำ</option>
+          <option value="done">เสร็จแล้ว</option>
+          <option value="legacy">ข้อมูลเก่า</option>
+        </select>
+        <select id="mSort">
+          <option value="newest">เรียง: ล่าสุด</option>
+          <option value="branch">เรียง: สาขา</option>
+          <option value="status">เรียง: สถานะ</option>
+        </select>
+      </div>
+      <div class="filter-count">
+        <span id="mCount">–</span>
+        <button class="filter-clear" id="mReset">ล้างตัวกรอง</button>
+      </div>
     </div>
     <div id="machinesWrap"><div class="loading">กำลังโหลด…</div></div>
   </div>
@@ -450,6 +491,11 @@ let machines = [], logons = [], checkins = [];
 let ready = { machines:false, logons:false, checkins:false };
 let openMachines = new Set(), openLogons = new Set();
 let openDetails = new Set(), openGuide = new Set(['s1']);
+let mFilter = { q:'', status:'all', sort:'newest' };
+let machineLimit = 30, checkinLimit = 25;
+const PAGE = 30;
+let photoCache = new Map();      // photoId -> photo doc
+let photoLoading = new Set();    // logonIds currently fetching
 let drafts = new Map();          // machineId -> half-typed logon name
 let lastError = null;
 
@@ -515,6 +561,7 @@ function normLogon(id, d){
     section1: fitArray(d.section1, S1.length, false).map(Boolean),
     section3: fitArray(d.section3, S3.length, false).map(Boolean),
     apps: fitArray(d.apps, APPS.length, 'unused'),
+    photoIds: Array.isArray(d.photoIds) ? d.photoIds.filter(x => typeof x === 'string') : [],
     createdAt: Number(d.createdAt) || 0,
     completedAt: Number(d.completedAt) || null
   };
@@ -621,15 +668,37 @@ function renderCheckins(){
   const wrap = $('checkinLogWrap');
   if(!ready.checkins) return;
   if(!checkins.length){ wrap.innerHTML = '<div class="empty"><div class="big">🪪</div>ยังไม่มีการเช็คอิน</div>'; return; }
-  wrap.innerHTML = checkins.slice(0,25).map(c => `
+  const shown = checkins.slice(0, checkinLimit);
+  wrap.innerHTML = shown.map(c => `
     <div class="checkin-row">
       <div>
         <div class="who">${esc(c.staff)}</div>
         <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''}</div>
       </div>
       <div class="meta">${fmtTime(c.ts)}</div>
-    </div>`).join('');
+    </div>`).join('')
+    + (checkins.length > shown.length
+        ? `<button class="load-more" data-act="more-checkins">โหลดเพิ่ม (เหลืออีก ${checkins.length - shown.length} รายการ)</button>`
+        : '');
 }
+
+/* ---------------- machines: filter controls ----------------
+   These inputs live outside #machinesWrap so a re-render never steals focus. */
+$('mSearch').addEventListener('input', e => {
+  mFilter.q = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
+});
+$('mStatus').addEventListener('change', e => {
+  mFilter.status = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
+});
+$('mSort').addEventListener('change', e => {
+  mFilter.sort = e.target.value; machineLimit = PAGE; safe('renderMachines', renderMachines);
+});
+$('mReset').addEventListener('click', () => {
+  mFilter = { q:'', status:'all', sort:'newest' };
+  machineLimit = PAGE;
+  $('mSearch').value = ''; $('mStatus').value = 'all'; $('mSort').value = 'newest';
+  safe('renderMachines', renderMachines);
+});
 
 /* ---------------- machines ---------------- */
 $('newStaffSelect').addEventListener('change', e => {
@@ -659,15 +728,59 @@ $('btnAddMachine').addEventListener('click', async () => {
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
 
+/* Search matches the machine itself and the names of people registered on it,
+   so looking up a person finds the PC they use. */
+function matchesSearch(m, q){
+  if(!q) return true;
+  const hay = [m.computer, m.branch, m.staff,
+               ...logons.filter(l => l.machineId === m.id).map(l => l.userName)]
+              .join(' ').toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(term => hay.includes(term));
+}
+
+function visibleMachines(){
+  const q = mFilter.q.trim().toLowerCase();
+  let list = machines.filter(m => {
+    if(!matchesSearch(m, q)) return false;
+    if(mFilter.status === 'all') return true;
+    if(mFilter.status === 'legacy') return m.isLegacy;
+    return statusOf(machineDone(m), ADMIN_STEPS.length) === mFilter.status;
+  });
+  const rank = { notstarted:0, progress:1, done:2 };
+  if(mFilter.sort === 'branch'){
+    list = [...list].sort((a,b) => a.branch.localeCompare(b.branch,'th') ||
+                                   a.computer.localeCompare(b.computer,'th'));
+  } else if(mFilter.sort === 'status'){
+    list = [...list].sort((a,b) =>
+      rank[statusOf(machineDone(a), ADMIN_STEPS.length)] -
+      rank[statusOf(machineDone(b), ADMIN_STEPS.length)] ||
+      a.branch.localeCompare(b.branch,'th'));
+  }
+  return list; // 'newest' keeps the createdAt-desc order from the snapshot
+}
+
 function renderMachines(){
   const wrap = $('machinesWrap');
   if(!ready.machines) return;
   if(!machines.length){
+    $('mCount').textContent = 'ยังไม่มีเครื่องในระบบ';
     wrap.innerHTML = '<div class="empty"><div class="big">🖥️</div>ยังไม่มีเครื่องในระบบ<br>เพิ่มเครื่องแรกด้านบนได้เลย</div>';
     return;
   }
+
+  const all = visibleMachines();
+  const shown = all.slice(0, machineLimit);
+  $('mCount').textContent = all.length === machines.length
+    ? `แสดง ${shown.length} จาก ${machines.length} เครื่อง`
+    : `พบ ${all.length} เครื่อง (จากทั้งหมด ${machines.length}) · แสดง ${shown.length}`;
+
+  if(!all.length){
+    wrap.innerHTML = '<div class="empty"><div class="big">🔍</div>ไม่พบเครื่องที่ตรงกับเงื่อนไข<br>ลองแก้คำค้นหรือล้างตัวกรอง</div>';
+    return;
+  }
+
   const y = window.scrollY;
-  wrap.innerHTML = machines.map(m => {
+  wrap.innerHTML = shown.map(m => {
     const done = machineDone(m), total = ADMIN_STEPS.length;
     const st = statusOf(done, total);
     const kids = logons.filter(l => l.machineId === m.id);
@@ -705,7 +818,10 @@ function renderMachines(){
                       : '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>'}
       </div>
     </div>`;
-  }).join('');
+  }).join('')
+  + (all.length > shown.length
+      ? `<button class="load-more" data-act="more-machines">โหลดเพิ่ม (เหลืออีก ${all.length - shown.length} เครื่อง)</button>`
+      : '');
   window.scrollTo(0, y);
 }
 
@@ -731,6 +847,16 @@ function logonCard(l){
           const tail = s === 'exported' ? ' · Export' : s === 'imported' ? ' · Import' : '';
           return `<div class="app-chip ${cls}" data-act="cycle-app" data-id="${l.id}" data-i="${i}">${esc(name)}${tail}</div>`;
         }).join('')}
+      </div>
+      <div class="photo-sec">
+        <div class="app-ref-note">
+          รูปหน้าจอ AS400 / หลักฐานการติดตั้ง (Section 1 ข้อ 3)<br>
+          <span style="color:var(--red); font-weight:600;">⚠️ ห้ามถ่ายรูปหน้าจอที่มีรหัสผ่านปรากฏอยู่</span>
+        </div>
+        <div class="photo-grid" id="pg-${l.id}">${photoGridHtml(l)}</div>
+        <label class="photo-add" id="pa-${l.id}" for="pf-${l.id}">+ แนบรูป</label>
+        <input type="file" id="pf-${l.id}" accept="image/*" capture="environment"
+               data-act="photo-pick" data-id="${l.id}" style="display:none">
       </div>
       <div class="logon-del"><button class="delete-btn" data-act="del-logon" data-id="${l.id}">ลบผู้ใช้งานนี้</button></div>
     </div>
@@ -764,6 +890,109 @@ function stepRow(l, section, i, s){
     </div>`;
 }
 
+/* ---------------- photos ----------------
+   Cloud Storage needs the Blaze plan, so images are shrunk in the browser and
+   kept in their own Firestore collection. That collection is fetched only when
+   a user card is opened, so photo data never rides along with the live sync.  */
+const PHOTO_MAX_CHARS = 700000;   // stays well under Firestore's 1 MiB doc limit
+
+function photoGridHtml(l){
+  if(!l.photoIds.length) return '<span style="font-size:11.5px;color:var(--ink-soft);">ยังไม่มีรูป</span>';
+  if(photoLoading.has(l.id)) return '<span style="font-size:11.5px;color:var(--ink-soft);">กำลังโหลดรูป…</span>';
+  const have = l.photoIds.filter(pid => photoCache.has(pid));
+  if(!have.length) return '<span style="font-size:11.5px;color:var(--ink-soft);">แตะเพื่อโหลดรูป (' + l.photoIds.length + ')</span>';
+  return have.map(pid => {
+    const p = photoCache.get(pid);
+    return `<div class="photo-item">
+      <img src="${p.dataUrl}" alt="" data-act="photo-open" data-id="${pid}">
+      <button class="photo-del" data-act="photo-del" data-id="${pid}" data-logon="${l.id}" title="ลบรูป">×</button>
+    </div>`;
+  }).join('');
+}
+
+async function loadPhotos(logonId){
+  const l = logons.find(x => x.id === logonId);
+  if(!l || !l.photoIds.length) return;
+  const missing = l.photoIds.filter(pid => !photoCache.has(pid));
+  if(!missing.length || photoLoading.has(logonId)) return;
+  photoLoading.add(logonId);
+  safe('renderMachines', renderMachines);
+  try{
+    const docs = await Promise.all(missing.map(pid => getDoc(doc(db,'photos',pid))));
+    docs.forEach((snap, i) => {
+      if(snap.exists()) photoCache.set(missing[i], snap.data());
+    });
+  }catch(e){ toast('โหลดรูปไม่สำเร็จ: ' + e.message); }
+  finally{
+    photoLoading.delete(logonId);
+    safe('renderMachines', renderMachines);
+  }
+}
+
+/* Resize + re-encode on the device: branch photos are often 4-5 MB, which would
+   never fit in a document, and uploading them raw over branch wifi is slow.   */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ'));
+      img.onload = () => {
+        const maxDim = 1280;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        let q = 0.62, out = cv.toDataURL('image/jpeg', q);
+        while(out.length > PHOTO_MAX_CHARS && q > 0.22){
+          q -= 0.1;
+          out = cv.toDataURL('image/jpeg', q);
+        }
+        if(out.length > PHOTO_MAX_CHARS) return reject(new Error('รูปใหญ่เกินไป ลองถ่ายใหม่หรือครอปก่อน'));
+        resolve(out);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addPhoto(logonId, file){
+  const l = logons.find(x => x.id === logonId);
+  if(!l) return;
+  if(!file.type.startsWith('image/')) return toast('กรุณาเลือกไฟล์รูปภาพ');
+  const btn = $('pa-' + logonId);
+  btn?.classList.add('busy');
+  if(btn) btn.textContent = 'กำลังย่อรูป…';
+  try{
+    const dataUrl = await compressImage(file);
+    if(btn) btn.textContent = 'กำลังอัปโหลด…';
+    const pid = uid();
+    const payload = { logonId, machineId:l.machineId, name:file.name || 'photo.jpg', dataUrl, ts:Date.now() };
+    await setDoc(doc(db,'photos',pid), payload);
+    await updateDoc(doc(db,'logons',logonId), { photoIds: [...l.photoIds, pid] });
+    photoCache.set(pid, payload);
+    toast('แนบรูปแล้ว (' + Math.round(dataUrl.length/1024) + ' KB)');
+  }catch(e){
+    toast('แนบรูปไม่สำเร็จ: ' + e.message);
+  }finally{
+    if(btn){ btn.classList.remove('busy'); btn.textContent = '+ แนบรูป'; }
+  }
+}
+
+function openLightbox(pid){
+  const p = photoCache.get(pid);
+  if(!p) return;
+  const box = document.createElement('div');
+  box.className = 'lightbox';
+  box.innerHTML = `<button class="close">&times;</button><img src="${p.dataUrl}" alt="">`;
+  box.addEventListener('click', () => box.remove());
+  document.body.appendChild(box);
+}
+
 /* ---------------- delegated events ----------------
    One listener for the whole document keeps handlers alive across re-renders. */
 document.addEventListener('input', e => {
@@ -780,6 +1009,20 @@ document.addEventListener('click', async e => {
     openMachines.has(id) ? openMachines.delete(id) : openMachines.add(id);
     $('panel-' + id)?.classList.toggle('open');
   }
+  if(act === 'more-machines'){ machineLimit += PAGE; safe('renderMachines', renderMachines); }
+  if(act === 'more-checkins'){ checkinLimit += 25; safe('renderCheckins', renderCheckins); }
+  if(act === 'photo-open'){ openLightbox(id); }
+  if(act === 'photo-del'){
+    if(!confirm('ลบรูปนี้?')) return;
+    const lid = el.dataset.logon;
+    const l = logons.find(x => x.id === lid);
+    try{
+      await deleteDoc(doc(db,'photos',id));
+      if(l) await updateDoc(doc(db,'logons',lid), { photoIds: l.photoIds.filter(p => p !== id) });
+      photoCache.delete(id);
+      toast('ลบรูปแล้ว');
+    }catch(err){ toast('ลบรูปไม่สำเร็จ: ' + err.message); }
+  }
   if(act === 'detail'){
     const key = el.dataset.key;
     openDetails.has(key) ? openDetails.delete(key) : openDetails.add(key);
@@ -793,6 +1036,7 @@ document.addEventListener('click', async e => {
   if(act === 'toggle-logon'){
     openLogons.has(id) ? openLogons.delete(id) : openLogons.add(id);
     $('lp-' + id)?.classList.toggle('open');
+    if(openLogons.has(id)) loadPhotos(id);
   }
   if(act === 'add-logon'){
     const name = (drafts.get(id) || '').trim();
@@ -801,7 +1045,7 @@ document.addEventListener('click', async e => {
     try{
       await setDoc(doc(db,'logons',uid()), {
         machineId:id, computer:m?.computer || '', branch:m?.branch || '', userName:name,
-        section1:S1.map(()=>false), section3:S3.map(()=>false), apps:APPS.map(()=>'unused'),
+        section1:S1.map(()=>false), section3:S3.map(()=>false), apps:APPS.map(()=>'unused'), photoIds:[],
         createdAt:Date.now(), completedAt:null
       });
       drafts.delete(id); openMachines.add(id);
@@ -818,8 +1062,12 @@ document.addEventListener('click', async e => {
   if(act === 'del-logon'){
     const l = logons.find(x => x.id === id); if(!l) return;
     if(!confirm('ลบผู้ใช้งาน ' + l.userName + ' ?')) return;
-    try{ await deleteDoc(doc(db,'logons',id)); toast('ลบแล้ว'); }
-    catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
+    try{
+      await deleteDoc(doc(db,'logons',id));
+      await Promise.all(l.photoIds.map(pid => deleteDoc(doc(db,'photos',pid)).catch(()=>{})));
+      l.photoIds.forEach(pid => photoCache.delete(pid));
+      toast('ลบแล้ว');
+    }catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
   }
   if(act === 'del-machine'){
     const m = machines.find(x => x.id === id); if(!m) return;
@@ -842,6 +1090,12 @@ document.addEventListener('change', async e => {
   if(!el) return;
   const { act, id } = el.dataset, i = +el.dataset.i;
 
+  if(act === 'photo-pick'){
+    const file = el.files && el.files[0];
+    el.value = '';                      // allow re-picking the same file later
+    if(file) await addPhoto(id, file);
+    return;
+  }
   if(act === 'admin-step'){
     const m = machines.find(x => x.id === id); if(!m) return;
     const def = ADMIN_STEPS[i];
