@@ -338,6 +338,9 @@
         <button class="btn ghost" id="btnExportCheckins">log เช็คอิน (CSV)</button>
       </div>
 
+      <h2 class="section-title">พื้นที่จัดเก็บ</h2>
+      <div class="card" id="usageWrap"><div class="loading">กำลังโหลด…</div></div>
+
       <h2 class="section-title">เครื่องมือซ่อมข้อมูล</h2>
       <div class="card">
         <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:12px;">
@@ -362,7 +365,9 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
+  query, where, orderBy, limit, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -376,7 +381,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
+/* Persistent cache keeps documents in IndexedDB between visits. Without it every
+   page open re-downloads the whole collection, which at a few thousand machines
+   burns through the daily read quota in a handful of sessions. With it, reopening
+   resumes from a token and only pulls what actually changed. */
+let db;
+try{
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+}catch(e){
+  console.warn('persistent cache unavailable, falling back', e);
+  db = getFirestore(app);
+}
 
 /* ---------------- checklist definitions ---------------- */
 const ADMIN_STEPS = [
@@ -510,8 +528,19 @@ const GUIDE_SECTIONS = [
 const LOGON_TOTAL = S1.length + S3.length;
 
 /* ---------------- state ---------------- */
-let machines = [], logons = [], checkins = [];
-let ready = { machines:false, logons:false, checkins:false };
+let machines = [], checkins = [];
+let ready = { machines:false, checkins:false };
+
+/* Logons are the largest collection, so they are NOT subscribed globally.
+   Each machine's users load only while its card is open, and the counts the
+   list/summary need are mirrored onto the machine document instead. */
+let logonsByMachine = new Map();   // machineId -> normalised logons
+let logonSubs = new Map();         // machineId -> unsubscribe fn
+let allLogonsLoaded = false;       // true once a full export load has run
+
+const logonsOf = mid => logonsByMachine.get(mid) || [];
+const allLogons = () => [...logonsByMachine.values()].flat();
+const findLogon = id => allLogons().find(l => l.id === id);
 let openMachines = new Set(), openLogons = new Set();
 let openDetails = new Set(), openGuide = new Set(['s1']);
 let mFilter = { q:'', branch:'all', status:'all', sort:'newest' };
@@ -571,6 +600,9 @@ function normMachine(id, d){
     adminSteps: fitArray(d.adminSteps, ADMIN_STEPS.length, false).map(Boolean),
     createdAt: Number(d.createdAt) || 0,
     completedAt: Number(d.completedAt) || null,
+    logonTotal: Number(d.logonTotal) || 0,
+    logonDone: Number(d.logonDone) || 0,
+    userNames: Array.isArray(d.userNames) ? d.userNames.filter(x => typeof x === 'string') : [],
     isLegacy: !Array.isArray(d.adminSteps)
   };
 }
@@ -599,7 +631,10 @@ const byNewest = (a,b) => b.createdAt - a.createdAt;
    Sorting happens in JS rather than via orderBy() so that documents missing a
    createdAt field still appear instead of being silently dropped by the query. */
 function watch(name, normaliser, assign){
-  onSnapshot(collection(db, name),
+  const source = name === 'checkins'
+    ? query(collection(db,'checkins'), orderBy('ts','desc'), limit(CHECKIN_FETCH))
+    : collection(db, name);
+  onSnapshot(source,
     snap => {
       assign(snap.docs.map(d => normaliser(d.id, d.data())).sort(byNewest));
       ready[name] = true;
@@ -614,7 +649,57 @@ function watch(name, normaliser, assign){
     });
 }
 watch('machines', normMachine, v => machines = v);
-watch('logons',   normLogon,   v => logons = v);
+
+/* Only the newest check-ins are fetched; the full history is rarely needed
+   on site and pulling thousands of rows would burn the daily read budget. */
+const CHECKIN_FETCH = 300;
+
+function subscribeLogons(mid){
+  if(logonSubs.has(mid)) return;
+  const qy = query(collection(db,'logons'), where('machineId','==',mid));
+  const unsub = onSnapshot(qy, snap => {
+    logonsByMachine.set(mid, snap.docs.map(d => normLogon(d.id, d.data())).sort(byNewest));
+    syncMachineRollup(mid);
+    safe('renderMachines', renderMachines);
+    safe('renderAdmin', refreshAdminIfVisible);
+  }, err => toast('โหลดผู้ใช้งานไม่สำเร็จ: ' + err.message));
+  logonSubs.set(mid, unsub);
+}
+function unsubscribeLogons(mid){
+  const u = logonSubs.get(mid);
+  if(u){ u(); logonSubs.delete(mid); }
+}
+
+/* Mirrors user counts and names onto the machine doc so the list, search and
+   summary work without ever loading the logons collection. The equality check
+   keeps this from writing on every render. */
+async function syncMachineRollup(mid){
+  const m = machines.find(x => x.id === mid);
+  if(!m) return;
+  const list = logonsOf(mid);
+  const total = list.length;
+  const done = list.filter(l => logonDone(l) === LOGON_TOTAL).length;
+  const names = list.map(l => l.userName);
+  if(m.logonTotal === total && m.logonDone === done &&
+     m.userNames.join('|') === names.join('|')) return;
+  try{
+    await updateDoc(doc(db,'machines',mid), { logonTotal: total, logonDone: done, userNames: names });
+  }catch(e){ console.warn('rollup failed', e); }
+}
+
+async function loadAllLogons(){
+  const snap = await getDocs(collection(db,'logons'));
+  const grouped = new Map();
+  snap.docs.forEach(d => {
+    const l = normLogon(d.id, d.data());
+    if(!grouped.has(l.machineId)) grouped.set(l.machineId, []);
+    grouped.get(l.machineId).push(l);
+  });
+  grouped.forEach((v,k) => logonsByMachine.set(k, v.sort(byNewest)));
+  allLogonsLoaded = true;
+  return snap.size;
+}
+
 watch('checkins', normCheckin, v => checkins = v);
 
 setTimeout(() => {
@@ -813,9 +898,7 @@ $('btnAddMachine').addEventListener('click', async () => {
    so looking up a person finds the PC they use. */
 function matchesSearch(m, q){
   if(!q) return true;
-  const hay = [m.computer, m.branch, m.staff,
-               ...logons.filter(l => l.machineId === m.id).map(l => l.userName)]
-              .join(' ').toLowerCase();
+  const hay = [m.computer, m.branch, m.staff, ...m.userNames].join(' ').toLowerCase();
   return q.split(/\s+/).filter(Boolean).every(term => hay.includes(term));
 }
 
@@ -866,7 +949,8 @@ function renderMachines(){
   wrap.innerHTML = shown.map(m => {
     const done = machineDone(m), total = ADMIN_STEPS.length;
     const st = statusOf(done, total);
-    const kids = logons.filter(l => l.machineId === m.id);
+    const kids = logonsOf(m.id);
+    const uInfo = m.logonTotal ? `ผู้ใช้ ${m.logonDone}/${m.logonTotal}` : '';
     return `
     <div class="machine-card ${m.isLegacy ? 'legacy' : ''}">
       <div class="machine-head" data-act="toggle-machine" data-id="${m.id}">
@@ -875,7 +959,10 @@ function renderMachines(){
           <div class="machine-branch">${esc(m.branch)}${m.staff ? ' · ' + esc(m.staff) : ''}</div>
           ${m.isLegacy ? '<div class="legacy-tag">ข้อมูลเก่า — ใช้ปุ่มซ่อมข้อมูลในหน้าผู้ดูแล</div>' : ''}
         </div>
-        <div class="status-pill ${st}">Admin ${done}/${total}</div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div class="status-pill ${st}">Admin ${done}/${total}</div>
+          ${uInfo ? `<div style="font-size:10.5px; color:var(--ink-soft); margin-top:4px;">${uInfo}</div>` : ''}
+        </div>
       </div>
       <div class="progress-track"><div class="progress-fill" style="width:${Math.round(done/total*100)}%"></div></div>
       <div class="steps-panel ${openMachines.has(m.id) ? 'open' : ''}" id="panel-${m.id}">
@@ -898,7 +985,10 @@ function renderMachines(){
           <button class="btn secondary" data-act="add-logon" data-id="${m.id}">+ เพิ่ม</button>
         </div>
         ${kids.length ? kids.map(logonCard).join('')
-                      : '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>'}
+          : (logonSubs.has(m.id)
+              ? (m.logonTotal ? '<div class="empty" style="padding:14px;">กำลังโหลดผู้ใช้งาน…</div>'
+                              : '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>')
+              : '<div class="empty" style="padding:14px;">แตะหัวข้อเครื่องเพื่อโหลดผู้ใช้งาน</div>')}
       </div>
     </div>`;
   }).join('')
@@ -977,7 +1067,19 @@ function stepRow(l, section, i, s){
    Cloud Storage needs the Blaze plan, so images are shrunk in the browser and
    kept in their own Firestore collection. That collection is fetched only when
    a user card is opened, so photo data never rides along with the live sync.  */
-const PHOTO_MAX_CHARS = 700000;   // stays well under Firestore's 1 MiB doc limit
+const PHOTO_MAX_CHARS = 400000;   // ~400 KB of base64 per photo
+const PHOTO_MAX_PER_USER = 2;     // keeps total footprint predictable at fleet scale
+const FREE_QUOTA_BYTES = 1024 * 1024 * 1024;   // Firestore Spark: 1 GiB
+
+/* Running totals live in a single counter document, so the admin screen can show
+   usage without reading every photo. */
+async function bumpUsage(countDelta, byteDelta){
+  try{
+    await setDoc(doc(db,'config','usage'),
+      { photoCount: increment(countDelta), photoBytes: increment(byteDelta) },
+      { merge:true });
+  }catch(e){ console.warn('usage counter failed', e); }
+}
 
 function photoGridHtml(l){
   if(!l.photoIds.length) return '<span style="font-size:11.5px;color:var(--ink-soft);">ยังไม่มีรูป</span>';
@@ -994,7 +1096,7 @@ function photoGridHtml(l){
 }
 
 async function loadPhotos(logonId){
-  const l = logons.find(x => x.id === logonId);
+  const l = findLogon(logonId);
   if(!l || !l.photoIds.length) return;
   const missing = l.photoIds.filter(pid => !photoCache.has(pid));
   if(!missing.length || photoLoading.has(logonId)) return;
@@ -1022,14 +1124,14 @@ function compressImage(file){
       const img = new Image();
       img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ'));
       img.onload = () => {
-        const maxDim = 1280;
+        const maxDim = 1100;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const w = Math.max(1, Math.round(img.width * scale));
         const h = Math.max(1, Math.round(img.height * scale));
         const cv = document.createElement('canvas');
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        let q = 0.62, out = cv.toDataURL('image/jpeg', q);
+        let q = 0.55, out = cv.toDataURL('image/jpeg', q);
         while(out.length > PHOTO_MAX_CHARS && q > 0.22){
           q -= 0.1;
           out = cv.toDataURL('image/jpeg', q);
@@ -1044,9 +1146,11 @@ function compressImage(file){
 }
 
 async function addPhoto(logonId, file){
-  const l = logons.find(x => x.id === logonId);
+  const l = findLogon(logonId);
   if(!l) return;
   if(!file.type.startsWith('image/')) return toast('กรุณาเลือกไฟล์รูปภาพ');
+  if(l.photoIds.length >= PHOTO_MAX_PER_USER)
+    return toast('แนบได้สูงสุด ' + PHOTO_MAX_PER_USER + ' รูปต่อผู้ใช้งาน — ลบรูปเดิมก่อน');
   const btn = $('pa-' + logonId);
   btn?.classList.add('busy');
   if(btn) btn.textContent = 'กำลังย่อรูป…';
@@ -1054,10 +1158,12 @@ async function addPhoto(logonId, file){
     const dataUrl = await compressImage(file);
     if(btn) btn.textContent = 'กำลังอัปโหลด…';
     const pid = uid();
-    const payload = { logonId, machineId:l.machineId, name:file.name || 'photo.jpg', dataUrl, ts:Date.now() };
+    const payload = { logonId, machineId:l.machineId, name:file.name || 'photo.jpg',
+                      dataUrl, size:dataUrl.length, ts:Date.now() };
     await setDoc(doc(db,'photos',pid), payload);
     await updateDoc(doc(db,'logons',logonId), { photoIds: [...l.photoIds, pid] });
     photoCache.set(pid, payload);
+    bumpUsage(1, dataUrl.length);
     toast('แนบรูปแล้ว (' + Math.round(dataUrl.length/1024) + ' KB)');
   }catch(e){
     toast('แนบรูปไม่สำเร็จ: ' + e.message);
@@ -1089,8 +1195,22 @@ document.addEventListener('click', async e => {
   const { act, id } = el.dataset;
 
   if(act === 'toggle-machine'){
-    openMachines.has(id) ? openMachines.delete(id) : openMachines.add(id);
+    if(openMachines.has(id)){
+      openMachines.delete(id);
+      if(!allLogonsLoaded) unsubscribeLogons(id);   // stop paying for data nobody is looking at
+    }else{
+      openMachines.add(id);
+      subscribeLogons(id);
+    }
     $('panel-' + id)?.classList.toggle('open');
+  }
+  if(act === 'load-all-logons'){
+    el.textContent = 'กำลังโหลด…'; el.disabled = true;
+    try{
+      const n = await loadAllLogons();
+      toast('โหลดผู้ใช้งาน ' + n + ' คนแล้ว');
+      renderAdminLists(); safe('renderMachines', renderMachines);
+    }catch(err){ toast('โหลดไม่สำเร็จ: ' + err.message); el.disabled = false; }
   }
   if(act === 'more-machines'){ machineLimit += PAGE; safe('renderMachines', renderMachines); }
   if(act === 'more-checkins'){ checkinLimit += 25; safe('renderCheckins', renderCheckins); }
@@ -1098,11 +1218,13 @@ document.addEventListener('click', async e => {
   if(act === 'photo-del'){
     if(!confirm('ลบรูปนี้?')) return;
     const lid = el.dataset.logon;
-    const l = logons.find(x => x.id === lid);
+    const l = findLogon(lid);
     try{
+      const sz = photoCache.get(id)?.size || 0;
       await deleteDoc(doc(db,'photos',id));
       if(l) await updateDoc(doc(db,'logons',lid), { photoIds: l.photoIds.filter(p => p !== id) });
       photoCache.delete(id);
+      bumpUsage(-1, -sz);
       toast('ลบรูปแล้ว');
     }catch(err){ toast('ลบรูปไม่สำเร็จ: ' + err.message); }
   }
@@ -1136,14 +1258,14 @@ document.addEventListener('click', async e => {
     }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
   }
   if(act === 'cycle-app'){
-    const l = logons.find(x => x.id === id); if(!l) return;
+    const l = findLogon(id); if(!l) return;
     const i = +el.dataset.i, apps = [...l.apps];
     apps[i] = apps[i] === 'unused' ? 'exported' : apps[i] === 'exported' ? 'imported' : 'unused';
     try{ await updateDoc(doc(db,'logons',id), { apps }); }
     catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
   }
   if(act === 'del-logon'){
-    const l = logons.find(x => x.id === id); if(!l) return;
+    const l = findLogon(id); if(!l) return;
     if(!confirm('ลบผู้ใช้งาน ' + l.userName + ' ?')) return;
     try{
       await deleteDoc(doc(db,'logons',id));
@@ -1157,7 +1279,7 @@ document.addEventListener('click', async e => {
     if(!confirm('ลบเครื่อง ' + m.computer + ' พร้อมผู้ใช้งานทั้งหมดของเครื่องนี้?')) return;
     try{
       await deleteDoc(doc(db,'machines',id));
-      await Promise.all(logons.filter(l => l.machineId === id).map(l => deleteDoc(doc(db,'logons',l.id))));
+      await Promise.all(logonsOf(id).map(l => deleteDoc(doc(db,'logons',l.id))));
       toast('ลบแล้ว');
     }catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
   }
@@ -1186,7 +1308,7 @@ document.addEventListener('change', async e => {
     /* Safety interlock: uninstalling NetIQ destroys the stored passwords for
        every user of this shared machine, so confirm the export is done first. */
     if(def.danger && !m.adminSteps[i]){
-      const kids = logons.filter(l => l.machineId === id);
+      const kids = logonsOf(id);
       const pending = kids.filter(l => !l.section1[S1_EXPORT_IDX]);
       let warning = null;
       if(!kids.length){
@@ -1216,7 +1338,7 @@ document.addEventListener('change', async e => {
     }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
   }
   if(act === 'logon-step'){
-    const l = logons.find(x => x.id === id); if(!l) return;
+    const l = findLogon(id); if(!l) return;
     const sec = el.dataset.sec;
     const arr = [...l[sec]]; arr[i] = !arr[i];
     const s1 = sec === 'section1' ? arr : l.section1;
@@ -1269,11 +1391,10 @@ function renderSummary(){
     byBranch[b].total++;
     byBranch[b][statusOf(machineDone(m), ADMIN_STEPS.length)]++;
   });
-  logons.forEach(l => {
-    const b = l.branch;
-    (byBranch[b] ||= blank());
-    byBranch[b].uTotal++;
-    if(logonDone(l) === LOGON_TOTAL) byBranch[b].uDone++;
+  machines.forEach(m => {
+    const r = byBranch[m.branch];
+    r.uTotal += m.logonTotal;
+    r.uDone  += m.logonDone;
   });
   const keys = Object.keys(byBranch);
   $('summaryBody').innerHTML = keys.length
@@ -1300,6 +1421,7 @@ function unlockAdmin(){
   $('adminLocked').style.display = 'none';
   $('adminUnlocked').style.display = 'block';
   renderAdminLists();
+  renderUsage();
 }
 
 $('btnAdminUnlock').addEventListener('click', async () => {
@@ -1315,6 +1437,30 @@ $('btnAdminUnlock').addEventListener('click', async () => {
   }catch(e){ toast('ตรวจสอบรหัสผ่านไม่สำเร็จ: ' + e.message); }
 });
 
+async function renderUsage(){
+  const wrap = $('usageWrap');
+  try{
+    const snap = await getDoc(doc(db,'config','usage'));
+    const d = snap.exists() ? snap.data() : {};
+    const count = d.photoCount || 0;
+    const bytes = d.photoBytes || 0;
+    const pct = bytes / FREE_QUOTA_BYTES * 100;
+    const logonEstimate = machines.reduce((s,m) => s + m.logonTotal, 0);
+    const docs = machines.length + logonEstimate + checkins.length + count;
+    const tone = pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--amber)' : 'var(--green)';
+    wrap.innerHTML = `
+      <div class="ref-row"><div class="k">รูปทั้งหมด</div><div class="v">${count.toLocaleString()} รูป</div></div>
+      <div class="ref-row"><div class="k">ขนาดรูป</div><div class="v">${(bytes/1048576).toFixed(1)} MB</div></div>
+      <div class="ref-row"><div class="k">ใช้ไปแล้ว</div><div class="v" style="color:${tone}; font-weight:700;">${pct.toFixed(1)}% ของโควตาฟรี 1 GiB</div></div>
+      <div class="ref-row"><div class="k">เอกสารรวม</div><div class="v">${docs.toLocaleString()} docs</div></div>
+      <div class="ref-row"><div class="k">อ่านต่อครั้ง</div><div class="v">${(machines.length + checkins.length).toLocaleString()} reads <span style="color:var(--ink-soft); font-size:11.5px;">(เปิดเว็บใหม่ 1 ครั้ง · โควตา 50,000/วัน)</span></div></div>
+      <div class="progress-track" style="margin:12px 0 0;"><div class="progress-fill" style="width:${Math.min(100,pct)}%; background:${tone};"></div></div>
+      ${pct > 70 ? '<div class="step-warn" style="margin-top:10px;">ใกล้เต็มโควตาแล้ว — พิจารณาอัปเกรดเป็น Blaze แล้วย้ายรูปไป Cloud Storage หรือลบรูปของเครื่องที่ปิดงานแล้ว</div>' : ''}`;
+  }catch(e){
+    wrap.innerHTML = '<div class="empty">อ่านข้อมูลการใช้งานไม่ได้: ' + esc(e.message) + '</div>';
+  }
+}
+
 function renderAdminLists(){
   $('adminMachinesWrap').innerHTML = machines.length ? machines.map(m => `
     <div class="checkin-row">
@@ -1325,14 +1471,22 @@ function renderAdminLists(){
       <div class="row-actions"><button class="delete-btn" data-act="del-machine" data-id="${m.id}">ลบ</button></div>
     </div>`).join('') : '<div class="empty">ยังไม่มีเครื่องในระบบ</div>';
 
-  $('adminLogonsWrap').innerHTML = logons.length ? logons.map(l => `
+  const shownLogons = allLogons();
+  $('adminLogonsWrap').innerHTML =
+    (allLogonsLoaded ? '' :
+      `<div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:10px;">
+         แสดงเฉพาะผู้ใช้งานของเครื่องที่เปิดดูอยู่ (${shownLogons.length} คน) — กดปุ่มด้านล่างเพื่อดึงทั้งหมด
+         <br>การดึงทั้งหมดใช้โควตาอ่านเท่ากับจำนวนผู้ใช้งานทั้งระบบ ทำเฉพาะตอนจะออกรายงาน
+       </div>
+       <button class="btn ghost" data-act="load-all-logons" style="width:100%; margin-bottom:12px;">โหลดผู้ใช้งานทั้งหมด</button>`)
+    + (shownLogons.length ? shownLogons.map(l => `
     <div class="checkin-row">
       <div>
         <div class="who">${esc(l.userName)}</div>
         <div class="meta">${esc(l.computer)} · ${esc(l.branch)} · ${logonDone(l)}/${LOGON_TOTAL}</div>
       </div>
       <div class="row-actions"><button class="delete-btn" data-act="del-logon" data-id="${l.id}">ลบ</button></div>
-    </div>`).join('') : '<div class="empty">ยังไม่มีผู้ใช้งาน</div>';
+    </div>`).join('') : '<div class="empty">ยังไม่มีผู้ใช้งานที่โหลดไว้</div>');
 
   $('adminCheckinsWrap').innerHTML = checkins.length ? checkins.map(c => `
     <div class="checkin-row">
@@ -1363,7 +1517,7 @@ $('btnWipe').addEventListener('click', async () => {
   try{
     await Promise.all([
       ...machines.map(m => deleteDoc(doc(db,'machines',m.id))),
-      ...logons.map(l => deleteDoc(doc(db,'logons',l.id))),
+      ...allLogons().map(l => deleteDoc(doc(db,'logons',l.id))),
       ...checkins.map(c => deleteDoc(doc(db,'checkins',c.id)))
     ]);
     toast('ลบข้อมูลทั้งหมดแล้ว');
@@ -1395,11 +1549,19 @@ $('btnExportMachines').addEventListener('click', () => {
   ]);
 });
 
-$('btnExportLogons').addEventListener('click', () => {
+$('btnExportLogons').addEventListener('click', async () => {
+  if(!allLogonsLoaded){
+    if(!confirm('ต้องดึงข้อมูลผู้ใช้งานทั้งหมดก่อนออกรายงาน\n\nจะใช้โควตาอ่านเท่ากับจำนวนผู้ใช้งานทั้งระบบ ดำเนินการต่อ?')) return;
+    try{
+      const n = await loadAllLogons();
+      toast('โหลดผู้ใช้งาน ' + n + ' คนแล้ว');
+      renderAdminLists();
+    }catch(e){ return toast('โหลดไม่สำเร็จ: ' + e.message); }
+  }
   downloadCsv('uso_users_report.csv', [
     ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
      ...S1.map(s => 'S1: ' + s.label), ...S3.map(s => 'S3: ' + s.label), ...APPS.map(a => 'App: ' + a)],
-    ...logons.map(l => [
+    ...allLogons().map(l => [
       l.branch, l.computer, l.userName, statusLabel(statusOf(logonDone(l), LOGON_TOTAL)),
       logonDone(l), LOGON_TOTAL, fmtTime(l.createdAt), fmtTime(l.completedAt),
       ...l.section1.map(v => v ? 'เสร็จ' : '-'),
