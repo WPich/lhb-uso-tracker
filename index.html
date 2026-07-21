@@ -3,132 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>USO Deployment Tracker (Firebase)</title>
+<title>USO Deployment Tracker</title>
 <style>
   :root{
-    --navy:#132A4E;
-    --navy-deep:#0B1D38;
-    --teal:#1E8E82;
-    --teal-light:#E6F3F1;
-    --paper:#F5F6F8;
-    --card:#FFFFFF;
-    --ink:#1B2333;
-    --ink-soft:#5B6474;
-    --line:#E2E5EA;
-    --amber:#C98A2C;
-    --amber-bg:#FBF1E1;
-    --green:#2E8B4F;
-    --green-bg:#E9F5EC;
-    --red:#C2453B;
-    --red-bg:#FBEAE8;
-    --radius:14px;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --navy:#132A4E; --navy-deep:#0B1D38; --teal:#1E8E82; --paper:#F5F6F8; --card:#FFFFFF;
+    --ink:#1B2333; --ink-soft:#5B6474; --line:#E2E5EA;
+    --amber:#C98A2C; --amber-bg:#FBF1E1; --green:#2E8B4F; --green-bg:#E9F5EC;
+    --red:#C2453B; --red-bg:#FBEAE8; --radius:14px;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Thai', Arial, sans-serif;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family:var(--sans);
-    background:var(--paper);
-    color:var(--ink);
-    -webkit-font-smoothing:antialiased;
-  }
-  .app{max-width:640px;margin:0 auto;min-height:100vh;background:var(--paper);display:flex;flex-direction:column;}
+  body{margin:0; font-family:var(--sans); background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased;}
+  .app{max-width:640px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;}
 
-  /* HEADER — styled like a site work-order / access badge */
-  .badge{
-    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-deep) 100%);
-    color:#fff;
-    padding:22px 20px 20px;
-    position:relative;
-    overflow:hidden;
-  }
-  .badge::after{
-    content:"";
-    position:absolute; right:-40px; top:-40px;
-    width:160px;height:160px;border-radius:50%;
-    background:rgba(255,255,255,0.06);
-  }
-  .badge-eyebrow{
-    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-    color:rgba(255,255,255,0.6); font-weight:600; margin-bottom:4px;
-  }
-  .badge-title{font-size:20px;font-weight:700;letter-spacing:-.01em;}
-  .badge-sub{font-size:13px;color:rgba(255,255,255,0.72);margin-top:3px;}
-  .badge-stats{
-    display:flex; gap:10px; margin-top:16px;
-  }
-  .stat-chip{
-    flex:1; background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.14);
-    border-radius:10px; padding:8px 10px;
-  }
-  .stat-chip .n{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;}
-  .stat-chip .l{font-size:10.5px;color:rgba(255,255,255,0.65);margin-top:1px;}
+  .badge{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-deep) 100%); color:#fff; padding:22px 20px 20px; position:relative; overflow:hidden;}
+  .badge::after{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,0.06);}
+  .badge-eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,0.6); font-weight:600; margin-bottom:4px;}
+  .badge-title{font-size:20px; font-weight:700;}
+  .badge-sub{font-size:13px; color:rgba(255,255,255,0.72); margin-top:3px;}
+  .badge-stats{display:flex; gap:10px; margin-top:16px;}
+  .stat-chip{flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 10px;}
+  .stat-chip .n{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .stat-chip .l{font-size:10.5px; color:rgba(255,255,255,0.65); margin-top:1px;}
 
-  /* TABS */
-  .tabs{
-    display:flex; position:sticky; top:0; z-index:5;
-    background:var(--card); border-bottom:1px solid var(--line);
-  }
-  .tab{
-    flex:1; text-align:center; padding:13px 2px; font-size:12.5px; font-weight:600;
-    color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent;
-    user-select:none;
-  }
+  .tabs{display:flex; position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line);}
+  .tab{flex:1; text-align:center; padding:13px 2px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent; user-select:none;}
   .tab.active{color:var(--navy); border-bottom-color:var(--teal);}
 
   .view{display:none; padding:16px; flex:1;}
   .view.active{display:block;}
 
-  h2.section-title{
-    font-size:14px; text-transform:uppercase; letter-spacing:.08em;
-    color:var(--ink-soft); margin:4px 0 10px; font-weight:700;
-  }
-
-  .card{
-    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:16px; margin-bottom:12px;
-  }
+  h2.section-title{font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); margin:4px 0 10px; font-weight:700;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px;}
 
   label{font-size:12.5px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:6px;}
-  input[type=text], select, textarea{
-    width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px;
-    font-size:14.5px; font-family:inherit; background:#fcfcfd; color:var(--ink);
-    margin-bottom:12px;
-  }
+  input[type=text], select, textarea{width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; font-family:inherit; background:#fcfcfd; color:var(--ink); margin-bottom:12px;}
   input[type=text]:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
 
   .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
-  .chip-btn{
-    padding:8px 14px; border-radius:999px; border:1.5px solid var(--line);
-    background:#fff; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
-  }
+  .chip-btn{padding:8px 14px; border-radius:999px; border:1.5px solid var(--line); background:#fff; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;}
   .chip-btn.selected{background:var(--navy); border-color:var(--navy); color:#fff;}
 
-  .btn{
-    display:inline-block; width:100%; text-align:center;
-    background:var(--teal); color:#fff; border:none; padding:12px 16px;
-    border-radius:10px; font-size:14.5px; font-weight:700; cursor:pointer;
-  }
+  .btn{display:inline-block; width:100%; text-align:center; background:var(--teal); color:#fff; border:none; padding:12px 16px; border-radius:10px; font-size:14.5px; font-weight:700; cursor:pointer;}
   .btn:active{opacity:.85;}
   .btn.secondary{background:var(--navy);}
-  .btn.ghost{background:transparent; color:var(--teal); border:1.5px solid var(--teal); width:auto; padding:8px 14px; font-size:13px;}
+  .btn.ghost{background:transparent; color:var(--teal); border:1.5px solid var(--teal);}
+  .btn.danger{background:transparent; color:var(--red); border:1.5px solid var(--red);}
 
-  .checkin-log{border-top:1px dashed var(--line); margin-top:14px; padding-top:12px;}
   .checkin-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px; gap:10px;}
   .checkin-row:last-child{border-bottom:none;}
   .checkin-row .who{font-weight:700;}
   .checkin-row .meta{color:var(--ink-soft); font-size:12px;}
   .row-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
-  .delete-btn{
-    background:none; border:none; color:var(--red); font-size:12px; font-weight:700;
-    cursor:pointer; padding:4px 6px; flex-shrink:0;
-  }
+  .delete-btn{background:none; border:none; color:var(--red); font-size:12px; font-weight:700; cursor:pointer; padding:4px 6px;}
   .delete-btn:hover{text-decoration:underline;}
-  .machine-head-actions{display:flex; align-items:center; gap:8px;}
 
   .machine-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;}
+  .machine-card.legacy{border-color:var(--amber);}
   .machine-head{padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px;}
   .machine-id{font-weight:700; font-size:15px;}
   .machine-branch{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
@@ -136,69 +67,59 @@
   .status-pill.notstarted{background:var(--red-bg); color:var(--red);}
   .status-pill.progress{background:var(--amber-bg); color:var(--amber);}
   .status-pill.done{background:var(--green-bg); color:var(--green);}
+  .legacy-tag{display:inline-block; font-size:10.5px; font-weight:700; color:var(--amber); background:var(--amber-bg); padding:2px 7px; border-radius:6px; margin-top:4px;}
 
   .progress-track{height:6px; background:var(--line); border-radius:99px; margin:0 16px 14px; overflow:hidden;}
   .progress-fill{height:100%; background:var(--teal); border-radius:99px; transition:width .25s;}
 
   .steps-panel{display:none; padding:0 16px 16px; border-top:1px solid var(--line);}
   .steps-panel.open{display:block;}
-  .step-group-label{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--teal); margin:14px 0 8px;}
   .step-row{display:flex; align-items:flex-start; gap:10px; padding:7px 0; font-size:13.8px;}
   .step-row input{margin-top:2px; width:18px; height:18px; accent-color:var(--teal); flex-shrink:0;}
   .step-row.checked label{color:var(--ink-soft); text-decoration:line-through;}
-  .step-row label{font-weight:500; margin:0; color:var(--ink); font-size:13.8px;}
+  .step-row label{font-weight:500; margin:0; color:var(--ink); font-size:13.8px; cursor:pointer;}
 
-  .empty{text-align:center; padding:32px 16px; color:var(--ink-soft); font-size:13.5px;}
-  .empty .big{font-size:28px; margin-bottom:6px;}
-
-  .table-scroll{overflow-x:auto;}
-  .summary-table{width:100%; border-collapse:collapse; font-size:12.8px; min-width:560px;}
-  .summary-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:8px 6px; border-bottom:1.5px solid var(--line); white-space:nowrap;}
-  .summary-table td{padding:10px 6px; border-bottom:1px solid var(--line); white-space:nowrap;}
-  .toast{
-    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
-    background:var(--navy-deep); color:#fff; padding:10px 18px; border-radius:99px;
-    font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s, bottom .2s;
-    z-index:50; max-width:88vw; text-align:center;
-  }
-  .toast.show{opacity:1; bottom:26px;}
-  .loading{text-align:center; padding:40px; color:var(--ink-soft); font-size:13.5px;}
-
-  /* LOGONS (per-user checklist nested inside a machine) */
   .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
   .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
   .logon-head{padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;}
   .logon-name{font-weight:700; font-size:13.5px;}
-  .mini-progress-track{height:5px; background:var(--line); border-radius:99px; margin:0 12px 10px; overflow:hidden;}
-  .mini-progress-fill{height:100%; background:var(--teal); border-radius:99px; transition:width .25s;}
+  .mini-track{height:5px; background:var(--line); border-radius:99px; margin:0 12px 10px; overflow:hidden;}
+  .mini-fill{height:100%; background:var(--teal); border-radius:99px; transition:width .25s;}
   .logon-steps{display:none; padding:0 12px 12px; border-top:1px solid var(--line);}
   .logon-steps.open{display:block;}
   .app-ref-note{font-size:11px; color:var(--ink-soft); margin:12px 0 6px; line-height:1.5;}
-  .app-chip-grid{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px;}
+  .app-chip-grid{display:flex; flex-wrap:wrap; gap:6px;}
   .app-chip{font-size:11px; padding:5px 9px; border-radius:8px; border:1.5px solid var(--line); cursor:pointer; background:#fff; color:var(--ink-soft); font-weight:600;}
   .app-chip.exported{background:var(--amber-bg); border-color:var(--amber); color:var(--amber);}
   .app-chip.imported{background:var(--green-bg); border-color:var(--green); color:var(--green);}
-  .logon-delete-row{text-align:right; padding:8px 12px 0;}
   .add-logon-row{display:flex; gap:8px; margin:12px 0 4px;}
   .add-logon-row input{flex:1; margin-bottom:0;}
   .add-logon-row button{white-space:nowrap; width:auto; padding:9px 14px; font-size:12.5px;}
+  .logon-del{text-align:right; margin-top:8px;}
+
+  .empty{text-align:center; padding:32px 16px; color:var(--ink-soft); font-size:13.5px;}
+  .empty .big{font-size:28px; margin-bottom:6px;}
+  .loading{text-align:center; padding:36px; color:var(--ink-soft); font-size:13.5px;}
+  .err-box{background:var(--red-bg); border:1px solid var(--red); border-radius:10px; padding:14px; font-size:12.8px; color:var(--red); line-height:1.6;}
+  .err-box strong{display:block; margin-bottom:4px;}
+
+  .table-scroll{overflow-x:auto;}
+  .summary-table{width:100%; border-collapse:collapse; font-size:12.8px; min-width:560px;}
+  .summary-table th{text-align:left; font-size:10.5px; text-transform:uppercase; color:var(--ink-soft); padding:8px 6px; border-bottom:1.5px solid var(--line); white-space:nowrap;}
+  .summary-table td{padding:10px 6px; border-bottom:1px solid var(--line); white-space:nowrap;}
+
+  .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--navy-deep); color:#fff; padding:10px 18px; border-radius:99px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s, bottom .2s; z-index:50; max-width:88vw; text-align:center;}
+  .toast.show{opacity:1; bottom:26px;}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <div class="card" id="setupBanner" style="display:none; margin:14px 14px 0; border-color:var(--amber); background:var(--amber-bg);">
-    <strong style="color:var(--amber);">ยังไม่ได้ตั้งค่า Firebase</strong>
-    <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">
-      เปิดไฟล์นี้ด้วยตัวแก้ไขข้อความ แล้วใส่ค่า <code>firebaseConfig</code> ที่ได้จาก Firebase Console ในส่วนต้นของ &lt;script type="module"&gt;
-    </div>
-  </div>
-
   <div class="badge">
     <div class="badge-eyebrow">LH Bank · i-Sprint SSO</div>
     <div class="badge-title">USO Deployment Tracker</div>
-    <div class="badge-sub">Uninstall NetIQ → Install USO Client → Migrate 14 apps</div>
-    <div class="badge-stats" id="headerStats">
+    <div class="badge-sub">Uninstall NetIQ → Install USO Client → Migrate apps</div>
+    <div class="badge-stats">
       <div class="stat-chip"><div class="n" id="statTotal">–</div><div class="l">เครื่องทั้งหมด</div></div>
       <div class="stat-chip"><div class="n" id="statDone">–</div><div class="l">ติดตั้งเสร็จ</div></div>
       <div class="stat-chip"><div class="n" id="statOnsite">–</div><div class="l">เช็คอินวันนี้</div></div>
@@ -212,7 +133,7 @@
     <div class="tab" data-tab="admin">ผู้ดูแลระบบ</div>
   </div>
 
-  <!-- CHECK-IN VIEW -->
+  <!-- CHECK-IN -->
   <div class="view active" id="view-checkin">
     <h2 class="section-title">เช็คอินเข้างาน</h2>
     <div class="card">
@@ -224,30 +145,24 @@
         <div class="chip-btn" data-staff="__custom">อื่น ๆ</div>
       </div>
       <input type="text" id="customStaff" placeholder="พิมพ์ชื่อผู้ปฏิบัติงาน" style="display:none;">
-
       <label>สาขา / ไซต์งาน</label>
       <input type="text" id="checkinBranch" placeholder="เช่น สาขาสีลม, HQ ตึก A">
-
       <label>หมายเหตุ (ถ้ามี)</label>
       <textarea id="checkinNote" rows="2" placeholder="เช่น เริ่มงาน 09:00, รอ IT support เปิดสิทธิ์"></textarea>
-
       <button class="btn" id="btnCheckin">เช็คอินตอนนี้</button>
     </div>
-
     <h2 class="section-title">ประวัติเช็คอิน</h2>
-    <div class="card" id="checkinLogWrap">
-      <div class="loading">กำลังโหลด…</div>
-    </div>
+    <div class="card" id="checkinLogWrap"><div class="loading">กำลังโหลด…</div></div>
   </div>
 
-  <!-- MACHINES VIEW -->
+  <!-- MACHINES -->
   <div class="view" id="view-machines">
     <h2 class="section-title">เพิ่มเครื่องใหม่</h2>
     <div class="card">
       <label>สาขา</label>
       <input type="text" id="newBranch" placeholder="เช่น สาขาสีลม">
       <label>รหัส / ชื่อเครื่อง</label>
-      <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04 (เครื่องอาจมีผู้ใช้งานหลายคน)">
+      <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04">
       <label>ผู้รับผิดชอบ (ทีมติดตั้ง)</label>
       <select id="newStaffSelect">
         <option value="">— เลือกผู้รับผิดชอบ —</option>
@@ -259,45 +174,41 @@
       <input type="text" id="newStaffCustom" placeholder="พิมพ์ชื่อผู้รับผิดชอบ" style="display:none;">
       <button class="btn secondary" id="btnAddMachine">เพิ่มเครื่อง</button>
     </div>
-
     <h2 class="section-title">รายการเครื่องทั้งหมด</h2>
     <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">
-      1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่องได้ด้านล่าง
+      1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่อง
     </div>
-    <div id="machinesWrap">
-      <div class="loading">กำลังโหลด…</div>
-    </div>
+    <div id="machinesWrap"><div class="loading">กำลังโหลด…</div></div>
   </div>
 
-  <!-- SUMMARY VIEW -->
+  <!-- SUMMARY -->
   <div class="view" id="view-summary">
     <h2 class="section-title">สรุปภาพรวมตามสาขา</h2>
     <div class="card table-scroll">
-      <table class="summary-table" id="summaryTable">
+      <table class="summary-table">
         <thead><tr>
-          <th>สาขา</th><th>เครื่องทั้งหมด</th><th>ติดตั้งเสร็จ</th><th>กำลังติดตั้ง</th><th>ยังไม่เริ่ม</th>
-          <th>ผู้ใช้งานทั้งหมด</th><th>ผู้ใช้งานเสร็จ</th>
+          <th>สาขา</th><th>เครื่อง</th><th>ติดตั้งเสร็จ</th><th>กำลังทำ</th><th>ยังไม่เริ่ม</th><th>ผู้ใช้งาน</th><th>ผู้ใช้เสร็จ</th>
         </tr></thead>
-        <tbody id="summaryBody"></tbody>
+        <tbody id="summaryBody"><tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px;">กำลังโหลด…</td></tr></tbody>
       </table>
     </div>
     <h2 class="section-title">Checklist มาตรฐาน (อ้างอิง)</h2>
     <div class="card" style="font-size:12.8px; color:var(--ink-soft); line-height:1.75;">
-      <strong style="color:var(--ink);">Section 1 · User ปกติ (ก่อนติดตั้ง, ทำทุกคนที่ใช้เครื่อง):</strong><br>
+      <strong style="color:var(--ink);">Section 1 · User ปกติ (ก่อนติดตั้ง — ทำทุกคนที่ใช้เครื่อง)</strong><br>
       ตรวจ USO Extension → Export รหัสผ่านจาก NetIQ → จดค่า AS400 → ปิด NetIQ → ทดสอบ Login ด้วยมือ
       <br><br>
-      <strong style="color:var(--ink);">Section 2 · Admin (ติดตั้งเครื่อง, ทำครั้งเดียวต่อเครื่อง):</strong><br>
-      สลับ Admin → ตั้งค่า AS400/Printer + สร้าง Shortcut → Copy Icon ไป Startup → Uninstall NetIQ → Install USO Client → Reboot
+      <strong style="color:var(--ink);">Section 2 · Admin (ทำครั้งเดียวต่อเครื่อง)</strong><br>
+      สลับ Admin → ตั้งค่า AS400/Printer + Shortcut → Copy Icon ไป Startup → Uninstall NetIQ → Install USO Client → Reboot
       <br><br>
-      <strong style="color:var(--ink);">Section 3 · User ปกติ (หลัง Reboot, ทำทุกคนที่ใช้เครื่อง):</strong><br>
-      สลับกลับ User → เปิด SSO Shortcut → ลงทะเบียนใน Self Service Portal → Import User/Password → กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin ก่อน) → ทดสอบ Login ผ่าน SSO → ให้ End User ยืนยันครั้งสุดท้าย
+      <strong style="color:var(--ink);">Section 3 · User ปกติ (หลัง Reboot — ทำทุกคนที่ใช้เครื่อง)</strong><br>
+      สลับกลับ User → เปิด SSO Shortcut → ลงทะเบียน Self Service Portal → Import User/Password → กรอกรหัสครั้งแรก (IBMLogin ก่อน) → ทดสอบ Auto-login → End User ยืนยัน
       <br><br>
-      <strong style="color:var(--ink);">รายการแอป (อ้างอิง 14 แอป ไม่จำเป็นต้องใช้ครบทุกคน):</strong><br>
+      <strong style="color:var(--ink);">แอปอ้างอิง 14 รายการ (ไม่จำเป็นต้องใช้ครบทุกคน)</strong><br>
       Fund Flow, Selling Agent, Internal Blacklist, BDS web, BDS Main, Fee Payment, AS400 (Prod), E-Form, IBAM, Pinpad Client, CMS (ATM), eKYC, Collection (New), FTP Initialise Parameter
     </div>
   </div>
 
-  <!-- ADMIN VIEW -->
+  <!-- ADMIN -->
   <div class="view" id="view-admin">
     <div id="adminLocked">
       <h2 class="section-title">เข้าสู่ระบบผู้ดูแล</h2>
@@ -307,41 +218,41 @@
         <button class="btn secondary" id="btnAdminUnlock">เข้าสู่ระบบ</button>
       </div>
     </div>
-
     <div id="adminUnlocked" style="display:none;">
       <h2 class="section-title">ดาวน์โหลดรายงาน</h2>
       <div class="card">
-        <button class="btn secondary" id="btnExportMachines" style="margin-bottom:10px;">ดาวน์โหลดรายงานเครื่อง (CSV)</button>
-        <button class="btn secondary" id="btnExportLogons" style="margin-bottom:10px;">ดาวน์โหลดรายงานผู้ใช้งาน (CSV)</button>
-        <button class="btn ghost" id="btnExportCheckins" style="width:100%;">ดาวน์โหลด log เช็คอิน (CSV)</button>
+        <button class="btn secondary" id="btnExportMachines" style="margin-bottom:10px;">รายงานเครื่อง (CSV)</button>
+        <button class="btn secondary" id="btnExportLogons" style="margin-bottom:10px;">รายงานผู้ใช้งาน (CSV)</button>
+        <button class="btn ghost" id="btnExportCheckins">log เช็คอิน (CSV)</button>
+      </div>
+
+      <h2 class="section-title">เครื่องมือซ่อมข้อมูล</h2>
+      <div class="card">
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:12px;">
+          ใช้เมื่อพบเครื่องที่ติดป้าย "ข้อมูลเก่า" — ระบบจะเติมโครงสร้าง checklist ใหม่ให้ครบโดยไม่ลบข้อมูลอื่น
+        </div>
+        <button class="btn ghost" id="btnMigrate" style="margin-bottom:10px;">ซ่อมข้อมูลเก่าให้เข้ากับโครงสร้างใหม่</button>
+        <button class="btn danger" id="btnWipe">ลบข้อมูลทั้งหมด (เครื่อง + ผู้ใช้ + เช็คอิน)</button>
       </div>
 
       <h2 class="section-title">จัดการเครื่อง</h2>
       <div class="card" id="adminMachinesWrap"></div>
-
-      <h2 class="section-title">จัดการผู้ใช้งานเครื่อง</h2>
+      <h2 class="section-title">จัดการผู้ใช้งาน</h2>
       <div class="card" id="adminLogonsWrap"></div>
-
       <h2 class="section-title">จัดการประวัติเช็คอิน</h2>
       <div class="card" id="adminCheckinsWrap"></div>
     </div>
   </div>
 
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ============================================================
-// 1) PASTE YOUR FIREBASE CONFIG HERE
-//    Firebase Console → Project settings → Your apps → SDK setup and config
-// ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDlMNQ9HjPdvBzbNKnZujEYh8tpIXfSOUA",
   authDomain: "lhb-uso-tracker.firebaseapp.com",
@@ -352,595 +263,588 @@ const firebaseConfig = {
   measurementId: "G-XDYPVYDFTF"
 };
 
-const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
-if (!isConfigured) {
-  document.getElementById('setupBanner').style.display = 'block';
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-let db = null;
-if (isConfigured) {
-  const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-}
-
-// ---- CHECKLIST DEFINITIONS (matches Step_Setup_SSO_V2.xlsx) ----
+/* ---------------- checklist definitions ---------------- */
 const ADMIN_STEPS = [
   'เปลี่ยนเป็น User Administrator (TITN005)',
-  'ตั้งค่า AS400 (Printer) และสร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
+  'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
   'Copy Icon SSO ไปที่ Startup folder',
   'ถอนการติดตั้ง (Uninstall) NetIQ',
   'ติดตั้ง (Install) USO Client — AllUser',
   'รีสตาร์ทเครื่อง (Reboot)'
 ];
-const SECTION1_STEPS = [
+const S1 = [
   'ตรวจสอบ USO Extension บน Chrome/Edge',
   'Export User/Password จาก NETIQ ทุกแอปที่ใช้งาน',
   'จดค่า Configure AS400 (System Name/ID/Format) + ถ่ายรูปหน้าจอ',
   'ปิดการใช้งาน (Disable) NetIQ ที่ System Tray',
-  'ทดสอบ Login ทุกแอปด้วยตนเอง (ยืนยัน User/Password ถูกต้อง)'
+  'ทดสอบ Login ทุกแอปด้วยตนเอง'
 ];
-const SECTION3_STEPS = [
+const S3 = [
   'เปลี่ยนกลับเป็น User ปกติ (Switch User)',
-  'เปิด SSO ผ่าน Shortcut URL (ทดสอบเปิดหน้าเว็บได้)',
-  'ลงทะเบียนแอปใน Self Service Portal (Enable ทุกแอปที่ใช้งาน + Sign off)',
-  'Import User/Password ผ่าน USO Client ให้ครบตามแอปที่เลือกไว้',
-  'กรอกรหัสผ่านครั้งแรกตามลำดับ (ทำ IBMLogin/AS400 ก่อนแอปอื่น)',
+  'เปิด SSO ผ่าน Shortcut URL',
+  'ลงทะเบียนแอปใน Self Service Portal (Enable + Sign off)',
+  'Import User/Password ผ่าน USO Client',
+  'กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin/AS400 ก่อน)',
   'ทดสอบ Login ทุกแอปผ่าน SSO (Auto-login)',
   'ให้ End User ทดสอบและยืนยันครั้งสุดท้าย'
 ];
-const APP_LIST = [
-  'ระบบ Fund Flow','ระบบ Selling Agent','ระบบ Internal Blacklist','ระบบ BDS web','ระบบ BDS Main',
-  'ระบบ Fee Payment','ระบบ AS400 (Prod)','ระบบ E-Form','ระบบ IBAM','ระบบ Pinpad Client',
-  'ระบบ CMS (ATM)','eKYC','Collection (New)','FTP Initialise Parameter'
+const APPS = [
+  'Fund Flow','Selling Agent','Internal Blacklist','BDS web','BDS Main','Fee Payment','AS400 (Prod)',
+  'E-Form','IBAM','Pinpad Client','CMS (ATM)','eKYC','Collection (New)','FTP Init Parameter'
 ];
-const LOGON_TOTAL = SECTION1_STEPS.length + SECTION3_STEPS.length; // 12
+const LOGON_TOTAL = S1.length + S3.length;
 
-let machines = [];
-let logons = [];
-let checkins = [];
-let selectedStaff = '';
-let openPanels = new Set();      // expanded machine cards
-let logonOpenPanels = new Set(); // expanded logon (per-user) cards
+/* ---------------- state ---------------- */
+let machines = [], logons = [], checkins = [];
+let ready = { machines:false, logons:false, checkins:false };
+let openMachines = new Set(), openLogons = new Set();
+let drafts = new Map();          // machineId -> half-typed logon name
+let lastError = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function toast(msg){
-  const t = document.getElementById('toast');
+  const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2600);
 }
 
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-
-// ---- FIRESTORE LIVE SYNC ----
-if (isConfigured) {
-  onSnapshot(query(collection(db, 'machines'), orderBy('createdAt', 'desc')), snap => {
-    machines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderMachines(); renderSummary(); renderHeaderStats(); refreshAdminIfVisible();
-  }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
-
-  onSnapshot(query(collection(db, 'logons'), orderBy('createdAt', 'desc')), snap => {
-    logons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderMachines(); renderSummary(); refreshAdminIfVisible();
-  }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
-
-  onSnapshot(query(collection(db, 'checkins'), orderBy('ts', 'desc')), snap => {
-    checkins = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderCheckins(); renderHeaderStats(); refreshAdminIfVisible();
-  }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
-} else {
-  document.getElementById('checkinLogWrap').innerHTML = '<div class="empty">ตั้งค่า Firebase ก่อนใช้งาน (ดูข้อความด้านบน)</div>';
-  document.getElementById('machinesWrap').innerHTML = '<div class="empty">ตั้งค่า Firebase ก่อนใช้งาน (ดูข้อความด้านบน)</div>';
+/* Any uncaught error surfaces instead of silently freezing the UI. */
+window.addEventListener('error', e => showFatal(e.message));
+window.addEventListener('unhandledrejection', e => showFatal(e.reason?.message || String(e.reason)));
+function showFatal(msg){
+  lastError = msg;
+  const box = `<div class="err-box"><strong>เกิดข้อผิดพลาดในการแสดงผล</strong>${esc(msg)}<br><br>ลองรีเฟรชหน้า หรือแจ้งผู้ดูแลระบบพร้อมข้อความนี้</div>`;
+  ['machinesWrap','checkinLogWrap'].forEach(id => {
+    const el = $(id);
+    if(el && el.querySelector('.loading')) el.innerHTML = box;
+  });
 }
 
-// ---- TABS ----
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+/* Render wrapper: a crash shows a readable error in place, never an endless spinner. */
+function safe(label, fn){
+  try { fn(); }
+  catch(err){
+    console.error('[' + label + ']', err);
+    showFatal(label + ': ' + err.message);
+  }
+}
+
+/* ---------------- normalisation (this is what fixes the freeze) ----------------
+   Documents written by older versions of this app are missing fields the new
+   checklist expects. Every document is coerced into a known-good shape on read,
+   so a legacy record can never crash a render pass.                            */
+function fitArray(value, length, fallback){
+  return Array.from({length}, (_, i) =>
+    Array.isArray(value) && value[i] !== undefined ? value[i] : fallback);
+}
+function normMachine(id, d){
+  return {
+    id,
+    branch: d.branch || 'ไม่ระบุสาขา',
+    computer: d.computer || '(ไม่ระบุชื่อเครื่อง)',
+    staff: d.staff || '',
+    adminSteps: fitArray(d.adminSteps, ADMIN_STEPS.length, false).map(Boolean),
+    createdAt: Number(d.createdAt) || 0,
+    completedAt: Number(d.completedAt) || null,
+    isLegacy: !Array.isArray(d.adminSteps)
+  };
+}
+function normLogon(id, d){
+  return {
+    id,
+    machineId: d.machineId || '',
+    computer: d.computer || '',
+    branch: d.branch || 'ไม่ระบุสาขา',
+    userName: d.userName || '(ไม่ระบุชื่อ)',
+    section1: fitArray(d.section1, S1.length, false).map(Boolean),
+    section3: fitArray(d.section3, S3.length, false).map(Boolean),
+    apps: fitArray(d.apps, APPS.length, 'unused'),
+    createdAt: Number(d.createdAt) || 0,
+    completedAt: Number(d.completedAt) || null
+  };
+}
+function normCheckin(id, d){
+  return { id, staff: d.staff || '(ไม่ระบุ)', branch: d.branch || '', note: d.note || '', ts: Number(d.ts) || 0 };
+}
+
+const byNewest = (a,b) => b.createdAt - a.createdAt;
+
+/* ---------------- live sync ----------------
+   Sorting happens in JS rather than via orderBy() so that documents missing a
+   createdAt field still appear instead of being silently dropped by the query. */
+function watch(name, normaliser, assign){
+  onSnapshot(collection(db, name),
+    snap => {
+      assign(snap.docs.map(d => normaliser(d.id, d.data())).sort(byNewest));
+      ready[name] = true;
+      renderAll();
+    },
+    err => {
+      ready[name] = true;
+      const box = `<div class="err-box"><strong>เชื่อมต่อ Firestore ไม่สำเร็จ (${esc(name)})</strong>${esc(err.message)}<br><br>ตรวจสอบ Firestore Security Rules ว่าอนุญาตให้อ่าน/เขียนหรือยัง</div>`;
+      if(name === 'machines') $('machinesWrap').innerHTML = box;
+      if(name === 'checkins') $('checkinLogWrap').innerHTML = box;
+      toast('เชื่อมต่อ Firestore ไม่สำเร็จ');
+    });
+}
+watch('machines', normMachine, v => machines = v);
+watch('logons',   normLogon,   v => logons = v);
+watch('checkins', normCheckin, v => checkins = v);
+
+setTimeout(() => {
+  if(!ready.machines){
+    $('machinesWrap').innerHTML = '<div class="err-box"><strong>เชื่อมต่อนานผิดปกติ</strong>ยังไม่ได้รับข้อมูลจาก Firestore — ตรวจสอบอินเทอร์เน็ต หรือ Firestore Security Rules</div>';
+  }
+}, 12000);
+
+function renderAll(){
+  safe('renderMachines', renderMachines);
+  safe('renderCheckins', renderCheckins);
+  safe('renderSummary', renderSummary);
+  safe('renderStats', renderStats);
+  safe('renderAdmin', refreshAdminIfVisible);
+}
+
+/* ---------------- status helpers ---------------- */
+const machineDone = m => m.adminSteps.filter(Boolean).length;
+const logonDone = l => l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
+function statusOf(done, total){ return done === 0 ? 'notstarted' : done === total ? 'done' : 'progress'; }
+const statusLabel = s => s === 'done' ? 'เสร็จสิ้น' : s === 'progress' ? 'กำลังทำ' : 'ยังไม่เริ่ม';
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('view-'+tab.dataset.tab).classList.add('active');
+    $('view-' + tab.dataset.tab).classList.add('active');
   });
 });
 
-// ---- CHECK-IN ----
-document.querySelectorAll('#staffChips .chip-btn').forEach(chip=>{
-  chip.addEventListener('click', ()=>{
-    document.querySelectorAll('#staffChips .chip-btn').forEach(c=>c.classList.remove('selected'));
+/* ---------------- check-in ---------------- */
+let selectedStaff = '';
+document.querySelectorAll('#staffChips .chip-btn').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#staffChips .chip-btn').forEach(c => c.classList.remove('selected'));
     chip.classList.add('selected');
-    const custom = document.getElementById('customStaff');
+    const custom = $('customStaff');
     if(chip.dataset.staff === '__custom'){
-      custom.style.display = 'block';
-      selectedStaff = '';
-      custom.focus();
-    }else{
-      custom.style.display = 'none';
-      selectedStaff = chip.dataset.staff;
+      custom.style.display = 'block'; selectedStaff = ''; custom.focus();
+    } else {
+      custom.style.display = 'none'; selectedStaff = chip.dataset.staff;
     }
   });
 });
-document.getElementById('customStaff').addEventListener('input', e=>{ selectedStaff = e.target.value; });
+$('customStaff').addEventListener('input', e => selectedStaff = e.target.value.trim());
 
-document.getElementById('btnCheckin').addEventListener('click', async ()=>{
-  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
-  const branch = document.getElementById('checkinBranch').value.trim();
-  const note = document.getElementById('checkinNote').value.trim();
-  if(!selectedStaff){ toast('กรุณาเลือกหรือกรอกชื่อผู้ปฏิบัติงาน'); return; }
-  if(!branch){ toast('กรุณากรอกสาขา/ไซต์งาน'); return; }
+$('btnCheckin').addEventListener('click', async () => {
+  const branch = $('checkinBranch').value.trim();
+  const note = $('checkinNote').value.trim();
+  if(!selectedStaff) return toast('กรุณาเลือกหรือกรอกชื่อผู้ปฏิบัติงาน');
+  if(!branch) return toast('กรุณากรอกสาขา/ไซต์งาน');
   try{
-    const id = uid();
-    await setDoc(doc(db, 'checkins', id), { staff: selectedStaff, branch, note, ts: Date.now() });
-    document.getElementById('checkinBranch').value='';
-    document.getElementById('checkinNote').value='';
+    await setDoc(doc(db,'checkins',uid()), { staff:selectedStaff, branch, note, ts:Date.now() });
+    $('checkinBranch').value = ''; $('checkinNote').value = '';
     toast('เช็คอินสำเร็จ');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
 
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function fmtTime(ts){
+  if(!ts) return '';
   const d = new Date(ts);
-  return d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
 }
-function isToday(ts){
+const isToday = ts => {
   const d = new Date(ts), t = new Date();
   return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
-}
+};
 
 function renderCheckins(){
-  const wrap = document.getElementById('checkinLogWrap');
-  if(checkins.length===0){
-    wrap.innerHTML = '<div class="empty"><div class="big">🪪</div>ยังไม่มีการเช็คอิน</div>';
-    return;
-  }
-  wrap.innerHTML = checkins.slice(0,25).map(c=>`
+  const wrap = $('checkinLogWrap');
+  if(!ready.checkins) return;
+  if(!checkins.length){ wrap.innerHTML = '<div class="empty"><div class="big">🪪</div>ยังไม่มีการเช็คอิน</div>'; return; }
+  wrap.innerHTML = checkins.slice(0,25).map(c => `
     <div class="checkin-row">
       <div>
-        <div class="who">${escapeHtml(c.staff)}</div>
-        <div class="meta">${escapeHtml(c.branch)}${c.note ? ' · '+escapeHtml(c.note) : ''}</div>
+        <div class="who">${esc(c.staff)}</div>
+        <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''}</div>
       </div>
       <div class="meta">${fmtTime(c.ts)}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ============================================================
-// MACHINES (Section 2 · Admin install, once per machine)
-// ============================================================
-document.getElementById('newStaffSelect').addEventListener('change', e=>{
-  const customInput = document.getElementById('newStaffCustom');
-  if(e.target.value === '__custom'){
-    customInput.style.display = 'block';
-    customInput.value = '';
-    customInput.focus();
-  }else{
-    customInput.style.display = 'none';
-    customInput.value = '';
-  }
+/* ---------------- machines ---------------- */
+$('newStaffSelect').addEventListener('change', e => {
+  const custom = $('newStaffCustom');
+  const on = e.target.value === '__custom';
+  custom.style.display = on ? 'block' : 'none';
+  custom.value = '';
+  if(on) custom.focus();
 });
 
-document.getElementById('btnAddMachine').addEventListener('click', async ()=>{
-  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
-  const branch = document.getElementById('newBranch').value.trim();
-  const computer = document.getElementById('newComputer').value.trim();
-  const staffSelect = document.getElementById('newStaffSelect').value;
-  const staffCustom = document.getElementById('newStaffCustom').value.trim();
-  const staff = staffSelect === '__custom' ? staffCustom : staffSelect;
-  if(!branch || !computer){ toast('กรุณากรอกสาขาและรหัสเครื่อง'); return; }
+$('btnAddMachine').addEventListener('click', async () => {
+  const branch = $('newBranch').value.trim();
+  const computer = $('newComputer').value.trim();
+  const sel = $('newStaffSelect').value;
+  const staff = sel === '__custom' ? $('newStaffCustom').value.trim() : sel;
+  if(!branch || !computer) return toast('กรุณากรอกสาขาและรหัสเครื่อง');
   try{
-    const id = uid();
-    await setDoc(doc(db, 'machines', id), {
+    await setDoc(doc(db,'machines',uid()), {
       branch, computer, staff,
       adminSteps: ADMIN_STEPS.map(()=>false),
       createdAt: Date.now(), completedAt: null
     });
-    document.getElementById('newBranch').value='';
-    document.getElementById('newComputer').value='';
-    document.getElementById('newStaffSelect').value='';
-    document.getElementById('newStaffCustom').value='';
-    document.getElementById('newStaffCustom').style.display='none';
+    $('newBranch').value = ''; $('newComputer').value = '';
+    $('newStaffSelect').value = ''; $('newStaffCustom').value = '';
+    $('newStaffCustom').style.display = 'none';
     toast('เพิ่มเครื่องแล้ว');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
 
-function machineStatus(m){
-  const done = m.adminSteps.filter(Boolean).length;
-  if(done===0) return 'notstarted';
-  if(done===ADMIN_STEPS.length) return 'done';
-  return 'progress';
-}
-function logonStatus(l){
-  const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
-  if(done===0) return 'notstarted';
-  if(done===LOGON_TOTAL) return 'done';
-  return 'progress';
-}
-function statusLabel(s){
-  return s==='done' ? 'เสร็จสิ้น' : s==='progress' ? 'กำลังทำ' : 'ยังไม่เริ่ม';
-}
-
 function renderMachines(){
-  const wrap = document.getElementById('machinesWrap');
-  if(machines.length===0){
+  const wrap = $('machinesWrap');
+  if(!ready.machines) return;
+  if(!machines.length){
     wrap.innerHTML = '<div class="empty"><div class="big">🖥️</div>ยังไม่มีเครื่องในระบบ<br>เพิ่มเครื่องแรกด้านบนได้เลย</div>';
     return;
   }
-  wrap.innerHTML = machines.map(m=>{
-    const done = m.adminSteps.filter(Boolean).length;
-    const pct = Math.round((done/ADMIN_STEPS.length)*100);
-    const status = machineStatus(m);
-    const machineLogons = logons.filter(l=>l.machineId===m.id);
+  const y = window.scrollY;
+  wrap.innerHTML = machines.map(m => {
+    const done = machineDone(m), total = ADMIN_STEPS.length;
+    const st = statusOf(done, total);
+    const kids = logons.filter(l => l.machineId === m.id);
     return `
-    <div class="machine-card">
-      <div class="machine-head" onclick="toggleMachine('${m.id}')">
+    <div class="machine-card ${m.isLegacy ? 'legacy' : ''}">
+      <div class="machine-head" data-act="toggle-machine" data-id="${m.id}">
         <div>
-          <div class="machine-id">${escapeHtml(m.computer)}</div>
-          <div class="machine-branch">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''}</div>
+          <div class="machine-id">${esc(m.computer)}</div>
+          <div class="machine-branch">${esc(m.branch)}${m.staff ? ' · ' + esc(m.staff) : ''}</div>
+          ${m.isLegacy ? '<div class="legacy-tag">ข้อมูลเก่า — ใช้ปุ่มซ่อมข้อมูลในหน้าผู้ดูแล</div>' : ''}
         </div>
-        <div class="status-pill ${status}">Admin ${done}/${ADMIN_STEPS.length}</div>
+        <div class="status-pill ${st}">Admin ${done}/${total}</div>
       </div>
-      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="steps-panel ${openPanels.has(m.id)?'open':''}" id="panel-${m.id}">
-        <div class="section-divider" style="margin-top:2px;">Section 2 · ติดตั้งเครื่อง (Admin, ครั้งเดียว)</div>
-        ${ADMIN_STEPS.map((label,i)=>adminStepRow(m,i,label)).join('')}
+      <div class="progress-track"><div class="progress-fill" style="width:${Math.round(done/total*100)}%"></div></div>
+      <div class="steps-panel ${openMachines.has(m.id) ? 'open' : ''}" id="panel-${m.id}">
+        <div class="section-divider" style="margin-top:2px;">Section 2 · ติดตั้งเครื่อง (Admin)</div>
+        ${ADMIN_STEPS.map((label,i) => `
+          <div class="step-row ${m.adminSteps[i] ? 'checked' : ''}">
+            <input type="checkbox" id="a-${m.id}-${i}" ${m.adminSteps[i] ? 'checked' : ''}
+                   data-act="admin-step" data-id="${m.id}" data-i="${i}">
+            <label for="a-${m.id}-${i}">${esc(label)}</label>
+          </div>`).join('')}
 
         <div class="section-divider">ผู้ใช้งานเครื่องนี้ (Section 1 + 3)</div>
         <div class="add-logon-row">
-          <input type="text" id="newLogonInput-${m.id}" placeholder="ชื่อผู้ใช้งาน เช่น สมชาย ใจดี">
-          <button class="btn secondary" onclick="addLogon('${m.id}')">+ เพิ่ม</button>
+          <input type="text" data-draft="${m.id}" placeholder="ชื่อผู้ใช้งาน เช่น สมชาย ใจดี"
+                 value="${esc(drafts.get(m.id) || '')}">
+          <button class="btn secondary" data-act="add-logon" data-id="${m.id}">+ เพิ่ม</button>
         </div>
-        ${machineLogons.length===0
-          ? '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>'
-          : machineLogons.map(l=>logonCardHtml(l)).join('')}
+        ${kids.length ? kids.map(logonCard).join('')
+                      : '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>'}
       </div>
     </div>`;
   }).join('');
+  window.scrollTo(0, y);
 }
 
-function adminStepRow(m, idx, label){
-  const checked = m.adminSteps[idx];
-  return `
-    <div class="step-row ${checked?'checked':''}">
-      <input type="checkbox" id="chk-admin-${m.id}-${idx}" ${checked?'checked':''} onchange="toggleAdminStep('${m.id}',${idx})">
-      <label for="chk-admin-${m.id}-${idx}">${escapeHtml(label)}</label>
-    </div>`;
-}
-
-function logonStepRow(l, section, idx, label){
-  const checked = l[section][idx];
-  return `
-    <div class="step-row ${checked?'checked':''}">
-      <input type="checkbox" id="chk-${l.id}-${section}-${idx}" ${checked?'checked':''} onchange="toggleLogonStep('${l.id}','${section}',${idx})">
-      <label for="chk-${l.id}-${section}-${idx}">${escapeHtml(label)}</label>
-    </div>`;
-}
-
-function appChipHtml(l, idx, name){
-  const st = l.apps && l.apps[idx] ? l.apps[idx] : 'unused';
-  const cls = st==='exported' ? 'exported' : st==='imported' ? 'imported' : '';
-  const suffix = st==='exported' ? ' · Export แล้ว' : st==='imported' ? ' · Import แล้ว' : '';
-  return `<div class="app-chip ${cls}" onclick="cycleAppStatus('${l.id}',${idx})">${escapeHtml(name)}${suffix}</div>`;
-}
-
-function logonCardHtml(l){
-  const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
-  const pct = Math.round((done/LOGON_TOTAL)*100);
-  const status = logonStatus(l);
+function logonCard(l){
+  const done = logonDone(l), st = statusOf(done, LOGON_TOTAL);
   return `
   <div class="logon-card">
-    <div class="logon-head" onclick="toggleLogonPanel('${l.id}')">
-      <div class="logon-name">${escapeHtml(l.userName)}</div>
-      <div class="status-pill ${status}">${statusLabel(status)} ${done}/${LOGON_TOTAL}</div>
+    <div class="logon-head" data-act="toggle-logon" data-id="${l.id}">
+      <div class="logon-name">${esc(l.userName)}</div>
+      <div class="status-pill ${st}">${statusLabel(st)} ${done}/${LOGON_TOTAL}</div>
     </div>
-    <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${pct}%"></div></div>
-    <div class="logon-steps ${logonOpenPanels.has(l.id)?'open':''}" id="logon-panel-${l.id}">
-      <div class="section-divider" style="margin-left:0;">Section 1 · ก่อนติดตั้ง</div>
-      ${SECTION1_STEPS.map((label,i)=>logonStepRow(l,'section1',i,label)).join('')}
-      <div class="section-divider" style="margin-left:0;">Section 3 · หลัง Reboot</div>
-      ${SECTION3_STEPS.map((label,i)=>logonStepRow(l,'section3',i,label)).join('')}
-      <div class="app-ref-note">แอปที่ใช้งาน (อ้างอิงเท่านั้น ไม่จำเป็นต้องครบทุกแอป — แตะเพื่อเปลี่ยนสถานะ: ไม่ใช้งาน → Export แล้ว → Import แล้ว)</div>
+    <div class="mini-track"><div class="mini-fill" style="width:${Math.round(done/LOGON_TOTAL*100)}%"></div></div>
+    <div class="logon-steps ${openLogons.has(l.id) ? 'open' : ''}" id="lp-${l.id}">
+      <div class="section-divider">Section 1 · ก่อนติดตั้ง</div>
+      ${S1.map((label,i) => stepRow(l,'section1',i,label)).join('')}
+      <div class="section-divider">Section 3 · หลัง Reboot</div>
+      ${S3.map((label,i) => stepRow(l,'section3',i,label)).join('')}
+      <div class="app-ref-note">แอปที่ใช้งาน — อ้างอิงเท่านั้น ไม่ต้องครบทุกแอป (แตะเพื่อสลับ: ไม่ใช้งาน → Export แล้ว → Import แล้ว)</div>
       <div class="app-chip-grid">
-        ${APP_LIST.map((name,i)=>appChipHtml(l,i,name)).join('')}
+        ${APPS.map((name,i) => {
+          const s = l.apps[i];
+          const cls = s === 'exported' ? 'exported' : s === 'imported' ? 'imported' : '';
+          const tail = s === 'exported' ? ' · Export' : s === 'imported' ? ' · Import' : '';
+          return `<div class="app-chip ${cls}" data-act="cycle-app" data-id="${l.id}" data-i="${i}">${esc(name)}${tail}</div>`;
+        }).join('')}
       </div>
+      <div class="logon-del"><button class="delete-btn" data-act="del-logon" data-id="${l.id}">ลบผู้ใช้งานนี้</button></div>
     </div>
   </div>`;
 }
-
-window.toggleMachine = function(id){
-  if(openPanels.has(id)) openPanels.delete(id); else openPanels.add(id);
-  const panel = document.getElementById('panel-'+id);
-  if(panel) panel.classList.toggle('open');
-};
-
-window.toggleLogonPanel = function(id){
-  if(logonOpenPanels.has(id)) logonOpenPanels.delete(id); else logonOpenPanels.add(id);
-  const panel = document.getElementById('logon-panel-'+id);
-  if(panel) panel.classList.toggle('open');
-};
-
-window.toggleAdminStep = async function(machineId, idx){
-  if(!isConfigured) return;
-  const m = machines.find(x=>x.id===machineId);
-  if(!m) return;
-  const steps = [...m.adminSteps];
-  steps[idx] = !steps[idx];
-  const done = steps.filter(Boolean).length;
-  const completedAt = done===ADMIN_STEPS.length ? Date.now() : null;
-  try{
-    await updateDoc(doc(db, 'machines', machineId), { adminSteps: steps, completedAt });
-    if(done===ADMIN_STEPS.length) toast('ติดตั้งเครื่อง '+m.computer+' เสร็จสมบูรณ์ ✅');
-  }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
-};
-
-window.addLogon = async function(machineId){
-  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
-  const input = document.getElementById('newLogonInput-'+machineId);
-  const userName = input.value.trim();
-  if(!userName){ toast('กรุณากรอกชื่อผู้ใช้งาน'); return; }
-  const m = machines.find(x=>x.id===machineId);
-  try{
-    const id = uid();
-    await setDoc(doc(db, 'logons', id), {
-      machineId, computer: m ? m.computer : '', branch: m ? m.branch : '',
-      userName,
-      section1: SECTION1_STEPS.map(()=>false),
-      section3: SECTION3_STEPS.map(()=>false),
-      apps: APP_LIST.map(()=>'unused'),
-      createdAt: Date.now(), completedAt: null
-    });
-    input.value='';
-    openPanels.add(machineId);
-    toast('เพิ่มผู้ใช้งานแล้ว');
-  }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
-};
-
-window.toggleLogonStep = async function(id, section, idx){
-  if(!isConfigured) return;
-  const l = logons.find(x=>x.id===id);
-  if(!l) return;
-  const arr = [...l[section]];
-  arr[idx] = !arr[idx];
-  const s1 = section==='section1' ? arr : l.section1;
-  const s3 = section==='section3' ? arr : l.section3;
-  const done = s1.filter(Boolean).length + s3.filter(Boolean).length;
-  const completedAt = done===LOGON_TOTAL ? Date.now() : null;
-  try{
-    await updateDoc(doc(db, 'logons', id), { [section]: arr, completedAt });
-    if(done===LOGON_TOTAL) toast('ผู้ใช้งาน '+l.userName+' ทำครบทุกขั้นตอนแล้ว ✅');
-  }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
-};
-
-window.cycleAppStatus = async function(id, idx){
-  if(!isConfigured) return;
-  const l = logons.find(x=>x.id===id);
-  if(!l) return;
-  const apps = [...(l.apps || APP_LIST.map(()=>'unused'))];
-  const cur = apps[idx] || 'unused';
-  apps[idx] = cur==='unused' ? 'exported' : cur==='exported' ? 'imported' : 'unused';
-  try{ await updateDoc(doc(db, 'logons', id), { apps }); }
-  catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
-};
-
-window.deleteCheckin = async function(id){
-  if(!confirm('ลบรายการเช็คอินนี้?')) return;
-  try{ await deleteDoc(doc(db, 'checkins', id)); toast('ลบแล้ว'); }
-  catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
-};
-
-window.deleteMachine = async function(id){
-  const m = machines.find(x=>x.id===id);
-  if(!m) return;
-  if(!confirm('ลบเครื่อง '+m.computer+' พร้อมผู้ใช้งานทั้งหมดของเครื่องนี้ออกจากระบบ?')) return;
-  try{
-    await deleteDoc(doc(db, 'machines', id));
-    const related = logons.filter(l=>l.machineId===id);
-    await Promise.all(related.map(l=>deleteDoc(doc(db,'logons',l.id))));
-    toast('ลบแล้ว');
-  }catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
-};
-
-window.deleteLogon = async function(id){
-  const l = logons.find(x=>x.id===id);
-  if(!l) return;
-  if(!confirm('ลบผู้ใช้งาน '+l.userName+' ออกจากระบบ?')) return;
-  try{ await deleteDoc(doc(db, 'logons', id)); toast('ลบแล้ว'); }
-  catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
-};
-
-// ============================================================
-// ADMIN — passcode is stored in Firestore (config/admin, field "passcode"),
-// not in this file, so it never appears in the public GitHub source.
-// ============================================================
-
-function checkAdminSession(){
-  if(sessionStorage.getItem('adminUnlocked') === '1'){
-    document.getElementById('adminLocked').style.display = 'none';
-    document.getElementById('adminUnlocked').style.display = 'block';
-    renderAdminLists();
-  }
+function stepRow(l, section, i, label){
+  const on = l[section][i];
+  return `
+    <div class="step-row ${on ? 'checked' : ''}">
+      <input type="checkbox" id="s-${l.id}-${section}-${i}" ${on ? 'checked' : ''}
+             data-act="logon-step" data-id="${l.id}" data-sec="${section}" data-i="${i}">
+      <label for="s-${l.id}-${section}-${i}">${esc(label)}</label>
+    </div>`;
 }
 
-function refreshAdminIfVisible(){
-  if(document.getElementById('adminUnlocked').style.display !== 'none'){
-    renderAdminLists();
-  }
-}
+/* ---------------- delegated events ----------------
+   One listener for the whole document keeps handlers alive across re-renders. */
+document.addEventListener('input', e => {
+  const id = e.target.dataset?.draft;
+  if(id) drafts.set(id, e.target.value);
+});
 
-document.getElementById('btnAdminUnlock').addEventListener('click', async ()=>{
-  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
-  const val = document.getElementById('adminPasscode').value;
-  try{
-    const snap = await getDoc(doc(db, 'config', 'admin'));
-    const correct = snap.exists() ? snap.data().passcode : null;
-    if(!correct){
-      toast('ยังไม่ได้ตั้งรหัสผ่านผู้ดูแลใน Firestore (config/admin)');
-      return;
-    }
-    if(val === correct){
-      sessionStorage.setItem('adminUnlocked', '1');
-      document.getElementById('adminLocked').style.display = 'none';
-      document.getElementById('adminUnlocked').style.display = 'block';
-      renderAdminLists();
-      toast('เข้าสู่ระบบผู้ดูแลแล้ว');
-    }else{
-      toast('รหัสผ่านไม่ถูกต้อง');
-    }
-  }catch(e){
-    toast('ตรวจสอบรหัสผ่านไม่สำเร็จ: ' + e.message);
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const { act, id } = el.dataset;
+
+  if(act === 'toggle-machine'){
+    openMachines.has(id) ? openMachines.delete(id) : openMachines.add(id);
+    $('panel-' + id)?.classList.toggle('open');
+  }
+  if(act === 'toggle-logon'){
+    openLogons.has(id) ? openLogons.delete(id) : openLogons.add(id);
+    $('lp-' + id)?.classList.toggle('open');
+  }
+  if(act === 'add-logon'){
+    const name = (drafts.get(id) || '').trim();
+    if(!name) return toast('กรุณากรอกชื่อผู้ใช้งาน');
+    const m = machines.find(x => x.id === id);
+    try{
+      await setDoc(doc(db,'logons',uid()), {
+        machineId:id, computer:m?.computer || '', branch:m?.branch || '', userName:name,
+        section1:S1.map(()=>false), section3:S3.map(()=>false), apps:APPS.map(()=>'unused'),
+        createdAt:Date.now(), completedAt:null
+      });
+      drafts.delete(id); openMachines.add(id);
+      toast('เพิ่มผู้ใช้งานแล้ว');
+    }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+  }
+  if(act === 'cycle-app'){
+    const l = logons.find(x => x.id === id); if(!l) return;
+    const i = +el.dataset.i, apps = [...l.apps];
+    apps[i] = apps[i] === 'unused' ? 'exported' : apps[i] === 'exported' ? 'imported' : 'unused';
+    try{ await updateDoc(doc(db,'logons',id), { apps }); }
+    catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+  }
+  if(act === 'del-logon'){
+    const l = logons.find(x => x.id === id); if(!l) return;
+    if(!confirm('ลบผู้ใช้งาน ' + l.userName + ' ?')) return;
+    try{ await deleteDoc(doc(db,'logons',id)); toast('ลบแล้ว'); }
+    catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
+  }
+  if(act === 'del-machine'){
+    const m = machines.find(x => x.id === id); if(!m) return;
+    if(!confirm('ลบเครื่อง ' + m.computer + ' พร้อมผู้ใช้งานทั้งหมดของเครื่องนี้?')) return;
+    try{
+      await deleteDoc(doc(db,'machines',id));
+      await Promise.all(logons.filter(l => l.machineId === id).map(l => deleteDoc(doc(db,'logons',l.id))));
+      toast('ลบแล้ว');
+    }catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
+  }
+  if(act === 'del-checkin'){
+    if(!confirm('ลบรายการเช็คอินนี้?')) return;
+    try{ await deleteDoc(doc(db,'checkins',id)); toast('ลบแล้ว'); }
+    catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
   }
 });
 
-function renderAdminLists(){
-  const mWrap = document.getElementById('adminMachinesWrap');
-  const lWrap = document.getElementById('adminLogonsWrap');
-  const cWrap = document.getElementById('adminCheckinsWrap');
+document.addEventListener('change', async e => {
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const { act, id } = el.dataset, i = +el.dataset.i;
 
-  if(machines.length === 0){
-    mWrap.innerHTML = '<div class="empty">ยังไม่มีเครื่องในระบบ</div>';
-  }else{
-    mWrap.innerHTML = machines.map(m=>{
-      const done = m.adminSteps.filter(Boolean).length;
-      return `
-      <div class="checkin-row">
-        <div>
-          <div class="who">${escapeHtml(m.computer)}</div>
-          <div class="meta">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''} · Admin ${done}/${ADMIN_STEPS.length}</div>
-        </div>
-        <div class="row-actions">
-          <button class="delete-btn" onclick="deleteMachine('${m.id}')">ลบ</button>
-        </div>
-      </div>`;
-    }).join('');
+  if(act === 'admin-step'){
+    const m = machines.find(x => x.id === id); if(!m) return;
+    const steps = [...m.adminSteps]; steps[i] = !steps[i];
+    const done = steps.filter(Boolean).length;
+    try{
+      await updateDoc(doc(db,'machines',id), {
+        adminSteps: steps,
+        completedAt: done === ADMIN_STEPS.length ? Date.now() : null
+      });
+      if(done === ADMIN_STEPS.length) toast('ติดตั้งเครื่อง ' + m.computer + ' เสร็จสมบูรณ์ ✅');
+    }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
   }
+  if(act === 'logon-step'){
+    const l = logons.find(x => x.id === id); if(!l) return;
+    const sec = el.dataset.sec;
+    const arr = [...l[sec]]; arr[i] = !arr[i];
+    const s1 = sec === 'section1' ? arr : l.section1;
+    const s3 = sec === 'section3' ? arr : l.section3;
+    const done = s1.filter(Boolean).length + s3.filter(Boolean).length;
+    try{
+      await updateDoc(doc(db,'logons',id), {
+        [sec]: arr,
+        completedAt: done === LOGON_TOTAL ? Date.now() : null
+      });
+      if(done === LOGON_TOTAL) toast('ผู้ใช้งาน ' + l.userName + ' ครบทุกขั้นตอนแล้ว ✅');
+    }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+  }
+});
 
-  if(logons.length === 0){
-    lWrap.innerHTML = '<div class="empty">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>';
-  }else{
-    lWrap.innerHTML = logons.map(l=>{
-      const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
-      return `
-      <div class="checkin-row">
-        <div>
-          <div class="who">${escapeHtml(l.userName)}</div>
-          <div class="meta">${escapeHtml(l.computer)} · ${escapeHtml(l.branch)} · ${done}/${LOGON_TOTAL} ขั้นตอน</div>
-        </div>
-        <div class="row-actions">
-          <button class="delete-btn" onclick="deleteLogon('${l.id}')">ลบ</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  if(checkins.length === 0){
-    cWrap.innerHTML = '<div class="empty">ยังไม่มีประวัติเช็คอิน</div>';
-  }else{
-    cWrap.innerHTML = checkins.map(c=>`
-      <div class="checkin-row">
-        <div>
-          <div class="who">${escapeHtml(c.staff)}</div>
-          <div class="meta">${escapeHtml(c.branch)}${c.note ? ' · '+escapeHtml(c.note) : ''} · ${fmtTime(c.ts)}</div>
-        </div>
-        <div class="row-actions">
-          <button class="delete-btn" onclick="deleteCheckin('${c.id}')">ลบ</button>
-        </div>
-      </div>`).join('');
-  }
+/* ---------------- summary + stats ---------------- */
+function renderSummary(){
+  const blank = () => ({ total:0, done:0, progress:0, notstarted:0, uTotal:0, uDone:0 });
+  const byBranch = {};
+  machines.forEach(m => {
+    const b = m.branch;
+    (byBranch[b] ||= blank());
+    byBranch[b].total++;
+    byBranch[b][statusOf(machineDone(m), ADMIN_STEPS.length)]++;
+  });
+  logons.forEach(l => {
+    const b = l.branch;
+    (byBranch[b] ||= blank());
+    byBranch[b].uTotal++;
+    if(logonDone(l) === LOGON_TOTAL) byBranch[b].uDone++;
+  });
+  const keys = Object.keys(byBranch);
+  $('summaryBody').innerHTML = keys.length
+    ? keys.map(b => {
+        const r = byBranch[b];
+        return `<tr><td>${esc(b)}</td><td>${r.total}</td><td>${r.done}</td><td>${r.progress}</td><td>${r.notstarted}</td><td>${r.uTotal}</td><td>${r.uDone}</td></tr>`;
+      }).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px;">ยังไม่มีข้อมูล</td></tr>';
 }
 
+function renderStats(){
+  $('statTotal').textContent = machines.length;
+  $('statDone').textContent = machines.filter(m => machineDone(m) === ADMIN_STEPS.length).length;
+  $('statOnsite').textContent = checkins.filter(c => isToday(c.ts)).length;
+}
+
+/* ---------------- admin ---------------- */
+function refreshAdminIfVisible(){
+  if($('adminUnlocked').style.display !== 'none') renderAdminLists();
+}
+if(sessionStorage.getItem('adminUnlocked') === '1') unlockAdmin();
+
+function unlockAdmin(){
+  $('adminLocked').style.display = 'none';
+  $('adminUnlocked').style.display = 'block';
+  renderAdminLists();
+}
+
+$('btnAdminUnlock').addEventListener('click', async () => {
+  const val = $('adminPasscode').value;
+  try{
+    const snap = await getDoc(doc(db,'config','admin'));
+    const correct = snap.exists() ? snap.data().passcode : null;
+    if(!correct) return toast('ยังไม่ได้ตั้งรหัสผ่านใน Firestore (config/admin)');
+    if(val !== correct) return toast('รหัสผ่านไม่ถูกต้อง');
+    sessionStorage.setItem('adminUnlocked','1');
+    unlockAdmin();
+    toast('เข้าสู่ระบบผู้ดูแลแล้ว');
+  }catch(e){ toast('ตรวจสอบรหัสผ่านไม่สำเร็จ: ' + e.message); }
+});
+
+function renderAdminLists(){
+  $('adminMachinesWrap').innerHTML = machines.length ? machines.map(m => `
+    <div class="checkin-row">
+      <div>
+        <div class="who">${esc(m.computer)}${m.isLegacy ? ' <span class="legacy-tag">ข้อมูลเก่า</span>' : ''}</div>
+        <div class="meta">${esc(m.branch)}${m.staff ? ' · ' + esc(m.staff) : ''} · Admin ${machineDone(m)}/${ADMIN_STEPS.length}</div>
+      </div>
+      <div class="row-actions"><button class="delete-btn" data-act="del-machine" data-id="${m.id}">ลบ</button></div>
+    </div>`).join('') : '<div class="empty">ยังไม่มีเครื่องในระบบ</div>';
+
+  $('adminLogonsWrap').innerHTML = logons.length ? logons.map(l => `
+    <div class="checkin-row">
+      <div>
+        <div class="who">${esc(l.userName)}</div>
+        <div class="meta">${esc(l.computer)} · ${esc(l.branch)} · ${logonDone(l)}/${LOGON_TOTAL}</div>
+      </div>
+      <div class="row-actions"><button class="delete-btn" data-act="del-logon" data-id="${l.id}">ลบ</button></div>
+    </div>`).join('') : '<div class="empty">ยังไม่มีผู้ใช้งาน</div>';
+
+  $('adminCheckinsWrap').innerHTML = checkins.length ? checkins.map(c => `
+    <div class="checkin-row">
+      <div>
+        <div class="who">${esc(c.staff)}</div>
+        <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''} · ${fmtTime(c.ts)}</div>
+      </div>
+      <div class="row-actions"><button class="delete-btn" data-act="del-checkin" data-id="${c.id}">ลบ</button></div>
+    </div>`).join('') : '<div class="empty">ยังไม่มีประวัติเช็คอิน</div>';
+}
+
+$('btnMigrate').addEventListener('click', async () => {
+  const stale = machines.filter(m => m.isLegacy);
+  if(!stale.length) return toast('ไม่พบข้อมูลเก่าที่ต้องซ่อม');
+  if(!confirm('ซ่อมข้อมูลเก่า ' + stale.length + ' เครื่อง ให้ใช้ checklist โครงสร้างใหม่?')) return;
+  try{
+    await Promise.all(stale.map(m => updateDoc(doc(db,'machines',m.id), {
+      adminSteps: ADMIN_STEPS.map(()=>false),
+      createdAt: m.createdAt || Date.now()
+    })));
+    toast('ซ่อมข้อมูลเรียบร้อย ' + stale.length + ' เครื่อง');
+  }catch(e){ toast('ซ่อมข้อมูลไม่สำเร็จ: ' + e.message); }
+});
+
+$('btnWipe').addEventListener('click', async () => {
+  if(!confirm('ลบข้อมูลทั้งหมด? ทุกคนที่เปิดหน้านี้จะเห็นข้อมูลว่างเปล่า')) return;
+  if(!confirm('ยืนยันอีกครั้ง — การลบนี้กู้คืนไม่ได้')) return;
+  try{
+    await Promise.all([
+      ...machines.map(m => deleteDoc(doc(db,'machines',m.id))),
+      ...logons.map(l => deleteDoc(doc(db,'logons',l.id))),
+      ...checkins.map(c => deleteDoc(doc(db,'checkins',c.id)))
+    ]);
+    toast('ลบข้อมูลทั้งหมดแล้ว');
+  }catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
+});
+
+/* ---------------- CSV ---------------- */
 function downloadCsv(filename, rows){
   const csv = rows.map(r => r.map(cell => {
     const s = String(cell ?? '');
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   }).join(',')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8;' }));
   const a = document.createElement('a');
   a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
-document.getElementById('btnExportMachines').addEventListener('click', ()=>{
-  const header = ['สาขา','รหัส/ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ Admin','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
-    ...ADMIN_STEPS];
-  const rows = machines.map(m=>{
-    const done = m.adminSteps.filter(Boolean).length;
-    return [
-      m.branch, m.computer, m.staff||'', statusLabel(machineStatus(m)), done, ADMIN_STEPS.length,
-      m.createdAt ? fmtTime(m.createdAt) : '', m.completedAt ? fmtTime(m.completedAt) : '',
+$('btnExportMachines').addEventListener('click', () => {
+  downloadCsv('uso_machines_report.csv', [
+    ['สาขา','ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ', ...ADMIN_STEPS],
+    ...machines.map(m => [
+      m.branch, m.computer, m.staff, statusLabel(statusOf(machineDone(m), ADMIN_STEPS.length)),
+      machineDone(m), ADMIN_STEPS.length, fmtTime(m.createdAt), fmtTime(m.completedAt),
       ...m.adminSteps.map(v => v ? 'เสร็จ' : '-')
-    ];
-  });
-  downloadCsv('uso_machines_report.csv', [header, ...rows]);
+    ])
+  ]);
 });
 
-document.getElementById('btnExportLogons').addEventListener('click', ()=>{
-  const header = ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
-    ...SECTION1_STEPS.map(s=>'S1: '+s), ...SECTION3_STEPS.map(s=>'S3: '+s), ...APP_LIST.map(a=>'App: '+a)];
-  const rows = logons.map(l=>{
-    const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
-    return [
-      l.branch, l.computer, l.userName, statusLabel(logonStatus(l)), done, LOGON_TOTAL,
-      l.createdAt ? fmtTime(l.createdAt) : '', l.completedAt ? fmtTime(l.completedAt) : '',
+$('btnExportLogons').addEventListener('click', () => {
+  downloadCsv('uso_users_report.csv', [
+    ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
+     ...S1.map(s => 'S1: ' + s), ...S3.map(s => 'S3: ' + s), ...APPS.map(a => 'App: ' + a)],
+    ...logons.map(l => [
+      l.branch, l.computer, l.userName, statusLabel(statusOf(logonDone(l), LOGON_TOTAL)),
+      logonDone(l), LOGON_TOTAL, fmtTime(l.createdAt), fmtTime(l.completedAt),
       ...l.section1.map(v => v ? 'เสร็จ' : '-'),
       ...l.section3.map(v => v ? 'เสร็จ' : '-'),
-      ...(l.apps||[]).map(v => v==='imported' ? 'Import แล้ว' : v==='exported' ? 'Export แล้ว' : 'ไม่ใช้งาน')
-    ];
-  });
-  downloadCsv('uso_users_report.csv', [header, ...rows]);
+      ...l.apps.map(v => v === 'imported' ? 'Import แล้ว' : v === 'exported' ? 'Export แล้ว' : 'ไม่ใช้งาน')
+    ])
+  ]);
 });
 
-document.getElementById('btnExportCheckins').addEventListener('click', ()=>{
-  const header = ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน'];
-  const rows = checkins.map(c => [c.staff, c.branch, c.note||'', fmtTime(c.ts)]);
-  downloadCsv('uso_checkin_log.csv', [header, ...rows]);
+$('btnExportCheckins').addEventListener('click', () => {
+  downloadCsv('uso_checkin_log.csv', [
+    ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน'],
+    ...checkins.map(c => [c.staff, c.branch, c.note, fmtTime(c.ts)])
+  ]);
 });
-
-checkAdminSession();
-
-// ---- SUMMARY ----
-function renderSummary(){
-  const initBranch = ()=>({total:0, done:0, progress:0, notstarted:0, uTotal:0, uDone:0});
-  const byBranch = {};
-
-  machines.forEach(m=>{
-    const b = m.branch || 'ไม่ระบุสาขา';
-    if(!byBranch[b]) byBranch[b] = initBranch();
-    byBranch[b].total++;
-    byBranch[b][machineStatus(m)]++;
-  });
-
-  logons.forEach(l=>{
-    const b = l.branch || 'ไม่ระบุสาขา';
-    if(!byBranch[b]) byBranch[b] = initBranch();
-    byBranch[b].uTotal++;
-    if(logonStatus(l)==='done') byBranch[b].uDone++;
-  });
-
-  const body = document.getElementById('summaryBody');
-  const branches = Object.keys(byBranch);
-  if(branches.length===0){
-    body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px;">ยังไม่มีข้อมูล</td></tr>`;
-    return;
-  }
-  body.innerHTML = branches.map(b=>`
-    <tr>
-      <td>${escapeHtml(b)}</td>
-      <td>${byBranch[b].total}</td>
-      <td>${byBranch[b].done}</td>
-      <td>${byBranch[b].progress}</td>
-      <td>${byBranch[b].notstarted}</td>
-      <td>${byBranch[b].uTotal}</td>
-      <td>${byBranch[b].uDone}</td>
-    </tr>`).join('');
-}
-
-function renderHeaderStats(){
-  document.getElementById('statTotal').textContent = machines.length;
-  document.getElementById('statDone').textContent = machines.filter(m=>machineStatus(m)==='done').length;
-  document.getElementById('statOnsite').textContent = checkins.filter(c=>isToday(c.ts)).length;
-}
-
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
 </script>
 </body>
 </html>
