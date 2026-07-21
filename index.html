@@ -127,11 +127,6 @@
   }
   .delete-btn:hover{text-decoration:underline;}
   .machine-head-actions{display:flex; align-items:center; gap:8px;}
-  .danger-zone{margin-top:18px; text-align:center;}
-  .danger-zone button{
-    background:none; border:1.5px solid var(--red); color:var(--red);
-    padding:8px 16px; border-radius:9px; font-size:12.5px; font-weight:700; cursor:pointer;
-  }
 
   .machine-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;}
   .machine-head{padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px;}
@@ -156,17 +151,37 @@
   .empty{text-align:center; padding:32px 16px; color:var(--ink-soft); font-size:13.5px;}
   .empty .big{font-size:28px; margin-bottom:6px;}
 
-  .summary-table{width:100%; border-collapse:collapse; font-size:13.5px;}
-  .summary-table th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 6px; border-bottom:1.5px solid var(--line);}
-  .summary-table td{padding:10px 6px; border-bottom:1px solid var(--line);}
+  .table-scroll{overflow-x:auto;}
+  .summary-table{width:100%; border-collapse:collapse; font-size:12.8px; min-width:560px;}
+  .summary-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:8px 6px; border-bottom:1.5px solid var(--line); white-space:nowrap;}
+  .summary-table td{padding:10px 6px; border-bottom:1px solid var(--line); white-space:nowrap;}
   .toast{
     position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
     background:var(--navy-deep); color:#fff; padding:10px 18px; border-radius:99px;
     font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s, bottom .2s;
-    z-index:50;
+    z-index:50; max-width:88vw; text-align:center;
   }
   .toast.show{opacity:1; bottom:26px;}
   .loading{text-align:center; padding:40px; color:var(--ink-soft); font-size:13.5px;}
+
+  /* LOGONS (per-user checklist nested inside a machine) */
+  .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
+  .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
+  .logon-head{padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .logon-name{font-weight:700; font-size:13.5px;}
+  .mini-progress-track{height:5px; background:var(--line); border-radius:99px; margin:0 12px 10px; overflow:hidden;}
+  .mini-progress-fill{height:100%; background:var(--teal); border-radius:99px; transition:width .25s;}
+  .logon-steps{display:none; padding:0 12px 12px; border-top:1px solid var(--line);}
+  .logon-steps.open{display:block;}
+  .app-ref-note{font-size:11px; color:var(--ink-soft); margin:12px 0 6px; line-height:1.5;}
+  .app-chip-grid{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px;}
+  .app-chip{font-size:11px; padding:5px 9px; border-radius:8px; border:1.5px solid var(--line); cursor:pointer; background:#fff; color:var(--ink-soft); font-weight:600;}
+  .app-chip.exported{background:var(--amber-bg); border-color:var(--amber); color:var(--amber);}
+  .app-chip.imported{background:var(--green-bg); border-color:var(--green); color:var(--green);}
+  .logon-delete-row{text-align:right; padding:8px 12px 0;}
+  .add-logon-row{display:flex; gap:8px; margin:12px 0 4px;}
+  .add-logon-row input{flex:1; margin-bottom:0;}
+  .add-logon-row button{white-space:nowrap; width:auto; padding:9px 14px; font-size:12.5px;}
 </style>
 </head>
 <body>
@@ -182,10 +197,10 @@
   <div class="badge">
     <div class="badge-eyebrow">LH Bank · i-Sprint SSO</div>
     <div class="badge-title">USO Deployment Tracker</div>
-    <div class="badge-sub">Uninstall NetIQ → Install USO Client → Migrate 13 apps</div>
+    <div class="badge-sub">Uninstall NetIQ → Install USO Client → Migrate 14 apps</div>
     <div class="badge-stats" id="headerStats">
       <div class="stat-chip"><div class="n" id="statTotal">–</div><div class="l">เครื่องทั้งหมด</div></div>
-      <div class="stat-chip"><div class="n" id="statDone">–</div><div class="l">เสร็จแล้ว</div></div>
+      <div class="stat-chip"><div class="n" id="statDone">–</div><div class="l">ติดตั้งเสร็จ</div></div>
       <div class="stat-chip"><div class="n" id="statOnsite">–</div><div class="l">เช็คอินวันนี้</div></div>
     </div>
   </div>
@@ -232,8 +247,8 @@
       <label>สาขา</label>
       <input type="text" id="newBranch" placeholder="เช่น สาขาสีลม">
       <label>รหัส / ชื่อเครื่อง</label>
-      <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04 หรือ ชื่อพนักงานเจ้าของเครื่อง">
-      <label>ผู้รับผิดชอบ</label>
+      <input type="text" id="newComputer" placeholder="เช่น PC-SILOM-04 (เครื่องอาจมีผู้ใช้งานหลายคน)">
+      <label>ผู้รับผิดชอบ (ทีมติดตั้ง)</label>
       <select id="newStaffSelect">
         <option value="">— เลือกผู้รับผิดชอบ —</option>
         <option value="สุกฤษฎิ์ ชมพูพื้น">สุกฤษฎิ์ ชมพูพื้น</option>
@@ -246,6 +261,9 @@
     </div>
 
     <h2 class="section-title">รายการเครื่องทั้งหมด</h2>
+    <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">
+      1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่องได้ด้านล่าง
+    </div>
     <div id="machinesWrap">
       <div class="loading">กำลังโหลด…</div>
     </div>
@@ -254,16 +272,28 @@
   <!-- SUMMARY VIEW -->
   <div class="view" id="view-summary">
     <h2 class="section-title">สรุปภาพรวมตามสาขา</h2>
-    <div class="card">
+    <div class="card table-scroll">
       <table class="summary-table" id="summaryTable">
-        <thead><tr><th>สาขา</th><th>ทั้งหมด</th><th>เสร็จ</th><th>กำลังทำ</th><th>ยังไม่เริ่ม</th></tr></thead>
+        <thead><tr>
+          <th>สาขา</th><th>เครื่องทั้งหมด</th><th>ติดตั้งเสร็จ</th><th>กำลังติดตั้ง</th><th>ยังไม่เริ่ม</th>
+          <th>ผู้ใช้งานทั้งหมด</th><th>ผู้ใช้งานเสร็จ</th>
+        </tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
     </div>
     <h2 class="section-title">Checklist มาตรฐาน (อ้างอิง)</h2>
-    <div class="card" style="font-size:13px; color:var(--ink-soft); line-height:1.7;">
-      ฝั่ง User: ตรวจ USO Extension → Export รหัสผ่าน 13 แอป → บันทึกค่า AS400/Printer → ปิด NetIQ → ตรวจ Login<br>
-      ฝั่ง Admin: สลับ Admin → ตั้งค่า AS400/Printer → ถอน NetIQ → ติดตั้ง USO Client → Reboot → สลับ Profile ผู้ใช้ → เปิด SSO Shortcut → Enroll Application (Enable &amp; Save)
+    <div class="card" style="font-size:12.8px; color:var(--ink-soft); line-height:1.75;">
+      <strong style="color:var(--ink);">Section 1 · User ปกติ (ก่อนติดตั้ง, ทำทุกคนที่ใช้เครื่อง):</strong><br>
+      ตรวจ USO Extension → Export รหัสผ่านจาก NetIQ → จดค่า AS400 → ปิด NetIQ → ทดสอบ Login ด้วยมือ
+      <br><br>
+      <strong style="color:var(--ink);">Section 2 · Admin (ติดตั้งเครื่อง, ทำครั้งเดียวต่อเครื่อง):</strong><br>
+      สลับ Admin → ตั้งค่า AS400/Printer + สร้าง Shortcut → Copy Icon ไป Startup → Uninstall NetIQ → Install USO Client → Reboot
+      <br><br>
+      <strong style="color:var(--ink);">Section 3 · User ปกติ (หลัง Reboot, ทำทุกคนที่ใช้เครื่อง):</strong><br>
+      สลับกลับ User → เปิด SSO Shortcut → ลงทะเบียนใน Self Service Portal → Import User/Password → กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin ก่อน) → ทดสอบ Login ผ่าน SSO → ให้ End User ยืนยันครั้งสุดท้าย
+      <br><br>
+      <strong style="color:var(--ink);">รายการแอป (อ้างอิง 14 แอป ไม่จำเป็นต้องใช้ครบทุกคน):</strong><br>
+      Fund Flow, Selling Agent, Internal Blacklist, BDS web, BDS Main, Fee Payment, AS400 (Prod), E-Form, IBAM, Pinpad Client, CMS (ATM), eKYC, Collection (New), FTP Initialise Parameter
     </div>
   </div>
 
@@ -282,11 +312,15 @@
       <h2 class="section-title">ดาวน์โหลดรายงาน</h2>
       <div class="card">
         <button class="btn secondary" id="btnExportMachines" style="margin-bottom:10px;">ดาวน์โหลดรายงานเครื่อง (CSV)</button>
+        <button class="btn secondary" id="btnExportLogons" style="margin-bottom:10px;">ดาวน์โหลดรายงานผู้ใช้งาน (CSV)</button>
         <button class="btn ghost" id="btnExportCheckins" style="width:100%;">ดาวน์โหลด log เช็คอิน (CSV)</button>
       </div>
 
       <h2 class="section-title">จัดการเครื่อง</h2>
       <div class="card" id="adminMachinesWrap"></div>
+
+      <h2 class="section-title">จัดการผู้ใช้งานเครื่อง</h2>
+      <div class="card" id="adminLogonsWrap"></div>
 
       <h2 class="section-title">จัดการประวัติเช็คอิน</h2>
       <div class="card" id="adminCheckinsWrap"></div>
@@ -329,31 +363,50 @@ if (isConfigured) {
   db = getFirestore(app);
 }
 
-const STEP_DEFS = [
-  {group:'user', label:'ตรวจสอบ USO Extension บน Chrome และ Edge'},
-  {group:'user', label:'Export / ย้ายรหัสผ่าน 13 แอปพลิเคชันจาก NetIQ'},
-  {group:'user', label:'บันทึกค่า Config AS400 ID และเครื่องพิมพ์'},
-  {group:'user', label:'ปิดการใช้งาน (Disable) NetIQ'},
-  {group:'user', label:'ตรวจสอบ Login ทุกแอปพลิเคชันด้วยตนเอง'},
-  {group:'admin', label:'สลับไปยัง User Administrator'},
-  {group:'admin', label:'ตั้งค่า AS400 >> Printer'},
-  {group:'admin', label:'ถอนการติดตั้ง (Uninstall) NetIQ'},
-  {group:'admin', label:'ติดตั้ง USO Client'},
-  {group:'admin', label:'รีสตาร์ทเครื่อง (Reboot)'},
-  {group:'admin', label:'สลับกลับไปยัง Profile ผู้ใช้งานจริง'},
-  {group:'admin', label:'เปิด SSO Shortcut URL > Self Service Portal > Enroll Application (Enable & Save)'},
+// ---- CHECKLIST DEFINITIONS (matches Step_Setup_SSO_V2.xlsx) ----
+const ADMIN_STEPS = [
+  'เปลี่ยนเป็น User Administrator (TITN005)',
+  'ตั้งค่า AS400 (Printer) และสร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
+  'Copy Icon SSO ไปที่ Startup folder',
+  'ถอนการติดตั้ง (Uninstall) NetIQ',
+  'ติดตั้ง (Install) USO Client — AllUser',
+  'รีสตาร์ทเครื่อง (Reboot)'
 ];
+const SECTION1_STEPS = [
+  'ตรวจสอบ USO Extension บน Chrome/Edge',
+  'Export User/Password จาก NETIQ ทุกแอปที่ใช้งาน',
+  'จดค่า Configure AS400 (System Name/ID/Format) + ถ่ายรูปหน้าจอ',
+  'ปิดการใช้งาน (Disable) NetIQ ที่ System Tray',
+  'ทดสอบ Login ทุกแอปด้วยตนเอง (ยืนยัน User/Password ถูกต้อง)'
+];
+const SECTION3_STEPS = [
+  'เปลี่ยนกลับเป็น User ปกติ (Switch User)',
+  'เปิด SSO ผ่าน Shortcut URL (ทดสอบเปิดหน้าเว็บได้)',
+  'ลงทะเบียนแอปใน Self Service Portal (Enable ทุกแอปที่ใช้งาน + Sign off)',
+  'Import User/Password ผ่าน USO Client ให้ครบตามแอปที่เลือกไว้',
+  'กรอกรหัสผ่านครั้งแรกตามลำดับ (ทำ IBMLogin/AS400 ก่อนแอปอื่น)',
+  'ทดสอบ Login ทุกแอปผ่าน SSO (Auto-login)',
+  'ให้ End User ทดสอบและยืนยันครั้งสุดท้าย'
+];
+const APP_LIST = [
+  'ระบบ Fund Flow','ระบบ Selling Agent','ระบบ Internal Blacklist','ระบบ BDS web','ระบบ BDS Main',
+  'ระบบ Fee Payment','ระบบ AS400 (Prod)','ระบบ E-Form','ระบบ IBAM','ระบบ Pinpad Client',
+  'ระบบ CMS (ATM)','eKYC','Collection (New)','FTP Initialise Parameter'
+];
+const LOGON_TOTAL = SECTION1_STEPS.length + SECTION3_STEPS.length; // 12
 
 let machines = [];
+let logons = [];
 let checkins = [];
 let selectedStaff = '';
-let openPanels = new Set(); // remember which machine cards are expanded across re-renders
+let openPanels = new Set();      // expanded machine cards
+let logonOpenPanels = new Set(); // expanded logon (per-user) cards
 
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 1800);
+  setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -363,6 +416,11 @@ if (isConfigured) {
   onSnapshot(query(collection(db, 'machines'), orderBy('createdAt', 'desc')), snap => {
     machines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderMachines(); renderSummary(); renderHeaderStats(); refreshAdminIfVisible();
+  }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
+
+  onSnapshot(query(collection(db, 'logons'), orderBy('createdAt', 'desc')), snap => {
+    logons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMachines(); renderSummary(); refreshAdminIfVisible();
   }, err => toast('เชื่อมต่อ Firestore ไม่สำเร็จ: ' + err.message));
 
   onSnapshot(query(collection(db, 'checkins'), orderBy('ts', 'desc')), snap => {
@@ -443,7 +501,9 @@ function renderCheckins(){
   `).join('');
 }
 
-// ---- MACHINES ----
+// ============================================================
+// MACHINES (Section 2 · Admin install, once per machine)
+// ============================================================
 document.getElementById('newStaffSelect').addEventListener('change', e=>{
   const customInput = document.getElementById('newStaffCustom');
   if(e.target.value === '__custom'){
@@ -468,7 +528,7 @@ document.getElementById('btnAddMachine').addEventListener('click', async ()=>{
     const id = uid();
     await setDoc(doc(db, 'machines', id), {
       branch, computer, staff,
-      steps: STEP_DEFS.map(()=>false),
+      adminSteps: ADMIN_STEPS.map(()=>false),
       createdAt: Date.now(), completedAt: null
     });
     document.getElementById('newBranch').value='';
@@ -481,9 +541,15 @@ document.getElementById('btnAddMachine').addEventListener('click', async ()=>{
 });
 
 function machineStatus(m){
-  const done = m.steps.filter(Boolean).length;
+  const done = m.adminSteps.filter(Boolean).length;
   if(done===0) return 'notstarted';
-  if(done===STEP_DEFS.length) return 'done';
+  if(done===ADMIN_STEPS.length) return 'done';
+  return 'progress';
+}
+function logonStatus(l){
+  const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
+  if(done===0) return 'notstarted';
+  if(done===LOGON_TOTAL) return 'done';
   return 'progress';
 }
 function statusLabel(s){
@@ -497,11 +563,10 @@ function renderMachines(){
     return;
   }
   wrap.innerHTML = machines.map(m=>{
-    const done = m.steps.filter(Boolean).length;
-    const pct = Math.round((done/STEP_DEFS.length)*100);
+    const done = m.adminSteps.filter(Boolean).length;
+    const pct = Math.round((done/ADMIN_STEPS.length)*100);
     const status = machineStatus(m);
-    const userSteps = STEP_DEFS.map((s,i)=>({...s,i})).filter(s=>s.group==='user');
-    const adminSteps = STEP_DEFS.map((s,i)=>({...s,i})).filter(s=>s.group==='admin');
+    const machineLogons = logons.filter(l=>l.machineId===m.id);
     return `
     <div class="machine-card">
       <div class="machine-head" onclick="toggleMachine('${m.id}')">
@@ -509,26 +574,73 @@ function renderMachines(){
           <div class="machine-id">${escapeHtml(m.computer)}</div>
           <div class="machine-branch">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''}</div>
         </div>
-        <div class="status-pill ${status}">${statusLabel(status)} ${done}/${STEP_DEFS.length}</div>
+        <div class="status-pill ${status}">Admin ${done}/${ADMIN_STEPS.length}</div>
       </div>
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="steps-panel ${openPanels.has(m.id)?'open':''}" id="panel-${m.id}">
-        <div class="step-group-label">ฝั่ง User</div>
-        ${userSteps.map(s=>stepRow(m,s)).join('')}
-        <div class="step-group-label">ฝั่ง Administrator</div>
-        ${adminSteps.map(s=>stepRow(m,s)).join('')}
+        <div class="section-divider" style="margin-top:2px;">Section 2 · ติดตั้งเครื่อง (Admin, ครั้งเดียว)</div>
+        ${ADMIN_STEPS.map((label,i)=>adminStepRow(m,i,label)).join('')}
+
+        <div class="section-divider">ผู้ใช้งานเครื่องนี้ (Section 1 + 3)</div>
+        <div class="add-logon-row">
+          <input type="text" id="newLogonInput-${m.id}" placeholder="ชื่อผู้ใช้งาน เช่น สมชาย ใจดี">
+          <button class="btn secondary" onclick="addLogon('${m.id}')">+ เพิ่ม</button>
+        </div>
+        ${machineLogons.length===0
+          ? '<div class="empty" style="padding:14px;">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>'
+          : machineLogons.map(l=>logonCardHtml(l)).join('')}
       </div>
     </div>`;
   }).join('');
 }
 
-function stepRow(m, s){
-  const checked = m.steps[s.i];
+function adminStepRow(m, idx, label){
+  const checked = m.adminSteps[idx];
   return `
     <div class="step-row ${checked?'checked':''}">
-      <input type="checkbox" id="chk-${m.id}-${s.i}" ${checked?'checked':''} onchange="toggleStep('${m.id}',${s.i})">
-      <label for="chk-${m.id}-${s.i}">${escapeHtml(s.label)}</label>
+      <input type="checkbox" id="chk-admin-${m.id}-${idx}" ${checked?'checked':''} onchange="toggleAdminStep('${m.id}',${idx})">
+      <label for="chk-admin-${m.id}-${idx}">${escapeHtml(label)}</label>
     </div>`;
+}
+
+function logonStepRow(l, section, idx, label){
+  const checked = l[section][idx];
+  return `
+    <div class="step-row ${checked?'checked':''}">
+      <input type="checkbox" id="chk-${l.id}-${section}-${idx}" ${checked?'checked':''} onchange="toggleLogonStep('${l.id}','${section}',${idx})">
+      <label for="chk-${l.id}-${section}-${idx}">${escapeHtml(label)}</label>
+    </div>`;
+}
+
+function appChipHtml(l, idx, name){
+  const st = l.apps && l.apps[idx] ? l.apps[idx] : 'unused';
+  const cls = st==='exported' ? 'exported' : st==='imported' ? 'imported' : '';
+  const suffix = st==='exported' ? ' · Export แล้ว' : st==='imported' ? ' · Import แล้ว' : '';
+  return `<div class="app-chip ${cls}" onclick="cycleAppStatus('${l.id}',${idx})">${escapeHtml(name)}${suffix}</div>`;
+}
+
+function logonCardHtml(l){
+  const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
+  const pct = Math.round((done/LOGON_TOTAL)*100);
+  const status = logonStatus(l);
+  return `
+  <div class="logon-card">
+    <div class="logon-head" onclick="toggleLogonPanel('${l.id}')">
+      <div class="logon-name">${escapeHtml(l.userName)}</div>
+      <div class="status-pill ${status}">${statusLabel(status)} ${done}/${LOGON_TOTAL}</div>
+    </div>
+    <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${pct}%"></div></div>
+    <div class="logon-steps ${logonOpenPanels.has(l.id)?'open':''}" id="logon-panel-${l.id}">
+      <div class="section-divider" style="margin-left:0;">Section 1 · ก่อนติดตั้ง</div>
+      ${SECTION1_STEPS.map((label,i)=>logonStepRow(l,'section1',i,label)).join('')}
+      <div class="section-divider" style="margin-left:0;">Section 3 · หลัง Reboot</div>
+      ${SECTION3_STEPS.map((label,i)=>logonStepRow(l,'section3',i,label)).join('')}
+      <div class="app-ref-note">แอปที่ใช้งาน (อ้างอิงเท่านั้น ไม่จำเป็นต้องครบทุกแอป — แตะเพื่อเปลี่ยนสถานะ: ไม่ใช้งาน → Export แล้ว → Import แล้ว)</div>
+      <div class="app-chip-grid">
+        ${APP_LIST.map((name,i)=>appChipHtml(l,i,name)).join('')}
+      </div>
+    </div>
+  </div>`;
 }
 
 window.toggleMachine = function(id){
@@ -537,18 +649,73 @@ window.toggleMachine = function(id){
   if(panel) panel.classList.toggle('open');
 };
 
-window.toggleStep = async function(id, idx){
+window.toggleLogonPanel = function(id){
+  if(logonOpenPanels.has(id)) logonOpenPanels.delete(id); else logonOpenPanels.add(id);
+  const panel = document.getElementById('logon-panel-'+id);
+  if(panel) panel.classList.toggle('open');
+};
+
+window.toggleAdminStep = async function(machineId, idx){
   if(!isConfigured) return;
-  const m = machines.find(x=>x.id===id);
+  const m = machines.find(x=>x.id===machineId);
   if(!m) return;
-  const steps = [...m.steps];
+  const steps = [...m.adminSteps];
   steps[idx] = !steps[idx];
   const done = steps.filter(Boolean).length;
-  const completedAt = done===STEP_DEFS.length ? Date.now() : null;
+  const completedAt = done===ADMIN_STEPS.length ? Date.now() : null;
   try{
-    await updateDoc(doc(db, 'machines', id), { steps, completedAt });
-    if(done===STEP_DEFS.length) toast('เครื่อง '+m.computer+' เสร็จสมบูรณ์ ✅');
+    await updateDoc(doc(db, 'machines', machineId), { adminSteps: steps, completedAt });
+    if(done===ADMIN_STEPS.length) toast('ติดตั้งเครื่อง '+m.computer+' เสร็จสมบูรณ์ ✅');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
+};
+
+window.addLogon = async function(machineId){
+  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
+  const input = document.getElementById('newLogonInput-'+machineId);
+  const userName = input.value.trim();
+  if(!userName){ toast('กรุณากรอกชื่อผู้ใช้งาน'); return; }
+  const m = machines.find(x=>x.id===machineId);
+  try{
+    const id = uid();
+    await setDoc(doc(db, 'logons', id), {
+      machineId, computer: m ? m.computer : '', branch: m ? m.branch : '',
+      userName,
+      section1: SECTION1_STEPS.map(()=>false),
+      section3: SECTION3_STEPS.map(()=>false),
+      apps: APP_LIST.map(()=>'unused'),
+      createdAt: Date.now(), completedAt: null
+    });
+    input.value='';
+    openPanels.add(machineId);
+    toast('เพิ่มผู้ใช้งานแล้ว');
+  }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
+};
+
+window.toggleLogonStep = async function(id, section, idx){
+  if(!isConfigured) return;
+  const l = logons.find(x=>x.id===id);
+  if(!l) return;
+  const arr = [...l[section]];
+  arr[idx] = !arr[idx];
+  const s1 = section==='section1' ? arr : l.section1;
+  const s3 = section==='section3' ? arr : l.section3;
+  const done = s1.filter(Boolean).length + s3.filter(Boolean).length;
+  const completedAt = done===LOGON_TOTAL ? Date.now() : null;
+  try{
+    await updateDoc(doc(db, 'logons', id), { [section]: arr, completedAt });
+    if(done===LOGON_TOTAL) toast('ผู้ใช้งาน '+l.userName+' ทำครบทุกขั้นตอนแล้ว ✅');
+  }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
+};
+
+window.cycleAppStatus = async function(id, idx){
+  if(!isConfigured) return;
+  const l = logons.find(x=>x.id===id);
+  if(!l) return;
+  const apps = [...(l.apps || APP_LIST.map(()=>'unused'))];
+  const cur = apps[idx] || 'unused';
+  apps[idx] = cur==='unused' ? 'exported' : cur==='exported' ? 'imported' : 'unused';
+  try{ await updateDoc(doc(db, 'logons', id), { apps }); }
+  catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 };
 
 window.deleteCheckin = async function(id){
@@ -560,8 +727,20 @@ window.deleteCheckin = async function(id){
 window.deleteMachine = async function(id){
   const m = machines.find(x=>x.id===id);
   if(!m) return;
-  if(!confirm('ลบเครื่อง '+m.computer+' ออกจากระบบ?')) return;
-  try{ await deleteDoc(doc(db, 'machines', id)); toast('ลบแล้ว'); }
+  if(!confirm('ลบเครื่อง '+m.computer+' พร้อมผู้ใช้งานทั้งหมดของเครื่องนี้ออกจากระบบ?')) return;
+  try{
+    await deleteDoc(doc(db, 'machines', id));
+    const related = logons.filter(l=>l.machineId===id);
+    await Promise.all(related.map(l=>deleteDoc(doc(db,'logons',l.id))));
+    toast('ลบแล้ว');
+  }catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
+};
+
+window.deleteLogon = async function(id){
+  const l = logons.find(x=>x.id===id);
+  if(!l) return;
+  if(!confirm('ลบผู้ใช้งาน '+l.userName+' ออกจากระบบ?')) return;
+  try{ await deleteDoc(doc(db, 'logons', id)); toast('ลบแล้ว'); }
   catch(e){ toast('ลบไม่สำเร็จ: ' + e.message); }
 };
 
@@ -610,21 +789,40 @@ document.getElementById('btnAdminUnlock').addEventListener('click', async ()=>{
 
 function renderAdminLists(){
   const mWrap = document.getElementById('adminMachinesWrap');
+  const lWrap = document.getElementById('adminLogonsWrap');
   const cWrap = document.getElementById('adminCheckinsWrap');
 
   if(machines.length === 0){
     mWrap.innerHTML = '<div class="empty">ยังไม่มีเครื่องในระบบ</div>';
   }else{
     mWrap.innerHTML = machines.map(m=>{
-      const done = m.steps.filter(Boolean).length;
+      const done = m.adminSteps.filter(Boolean).length;
       return `
       <div class="checkin-row">
         <div>
           <div class="who">${escapeHtml(m.computer)}</div>
-          <div class="meta">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''} · ${done}/${STEP_DEFS.length} ขั้นตอน</div>
+          <div class="meta">${escapeHtml(m.branch)}${m.staff ? ' · '+escapeHtml(m.staff) : ''} · Admin ${done}/${ADMIN_STEPS.length}</div>
         </div>
         <div class="row-actions">
           <button class="delete-btn" onclick="deleteMachine('${m.id}')">ลบ</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(logons.length === 0){
+    lWrap.innerHTML = '<div class="empty">ยังไม่มีผู้ใช้งานที่บันทึกไว้</div>';
+  }else{
+    lWrap.innerHTML = logons.map(l=>{
+      const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
+      return `
+      <div class="checkin-row">
+        <div>
+          <div class="who">${escapeHtml(l.userName)}</div>
+          <div class="meta">${escapeHtml(l.computer)} · ${escapeHtml(l.branch)} · ${done}/${LOGON_TOTAL} ขั้นตอน</div>
+        </div>
+        <div class="row-actions">
+          <button class="delete-btn" onclick="deleteLogon('${l.id}')">ลบ</button>
         </div>
       </div>`;
     }).join('');
@@ -660,17 +858,33 @@ function downloadCsv(filename, rows){
 }
 
 document.getElementById('btnExportMachines').addEventListener('click', ()=>{
-  const header = ['สาขา','รหัส/ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
-    ...STEP_DEFS.map(s=>s.label)];
+  const header = ['สาขา','รหัส/ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ Admin','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
+    ...ADMIN_STEPS];
   const rows = machines.map(m=>{
-    const done = m.steps.filter(Boolean).length;
+    const done = m.adminSteps.filter(Boolean).length;
     return [
-      m.branch, m.computer, m.staff||'', statusLabel(machineStatus(m)), done, STEP_DEFS.length,
+      m.branch, m.computer, m.staff||'', statusLabel(machineStatus(m)), done, ADMIN_STEPS.length,
       m.createdAt ? fmtTime(m.createdAt) : '', m.completedAt ? fmtTime(m.completedAt) : '',
-      ...m.steps.map(v => v ? 'เสร็จ' : '-')
+      ...m.adminSteps.map(v => v ? 'เสร็จ' : '-')
     ];
   });
   downloadCsv('uso_machines_report.csv', [header, ...rows]);
+});
+
+document.getElementById('btnExportLogons').addEventListener('click', ()=>{
+  const header = ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','ขั้นตอนที่เสร็จ','จากทั้งหมด','วันที่เพิ่ม','วันที่เสร็จสมบูรณ์',
+    ...SECTION1_STEPS.map(s=>'S1: '+s), ...SECTION3_STEPS.map(s=>'S3: '+s), ...APP_LIST.map(a=>'App: '+a)];
+  const rows = logons.map(l=>{
+    const done = l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
+    return [
+      l.branch, l.computer, l.userName, statusLabel(logonStatus(l)), done, LOGON_TOTAL,
+      l.createdAt ? fmtTime(l.createdAt) : '', l.completedAt ? fmtTime(l.completedAt) : '',
+      ...l.section1.map(v => v ? 'เสร็จ' : '-'),
+      ...l.section3.map(v => v ? 'เสร็จ' : '-'),
+      ...(l.apps||[]).map(v => v==='imported' ? 'Import แล้ว' : v==='exported' ? 'Export แล้ว' : 'ไม่ใช้งาน')
+    ];
+  });
+  downloadCsv('uso_users_report.csv', [header, ...rows]);
 });
 
 document.getElementById('btnExportCheckins').addEventListener('click', ()=>{
@@ -683,17 +897,27 @@ checkAdminSession();
 
 // ---- SUMMARY ----
 function renderSummary(){
+  const initBranch = ()=>({total:0, done:0, progress:0, notstarted:0, uTotal:0, uDone:0});
   const byBranch = {};
+
   machines.forEach(m=>{
     const b = m.branch || 'ไม่ระบุสาขา';
-    if(!byBranch[b]) byBranch[b] = {total:0, done:0, progress:0, notstarted:0};
+    if(!byBranch[b]) byBranch[b] = initBranch();
     byBranch[b].total++;
     byBranch[b][machineStatus(m)]++;
   });
+
+  logons.forEach(l=>{
+    const b = l.branch || 'ไม่ระบุสาขา';
+    if(!byBranch[b]) byBranch[b] = initBranch();
+    byBranch[b].uTotal++;
+    if(logonStatus(l)==='done') byBranch[b].uDone++;
+  });
+
   const body = document.getElementById('summaryBody');
   const branches = Object.keys(byBranch);
   if(branches.length===0){
-    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:20px;">ยังไม่มีข้อมูล</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px;">ยังไม่มีข้อมูล</td></tr>`;
     return;
   }
   body.innerHTML = branches.map(b=>`
@@ -703,6 +927,8 @@ function renderSummary(){
       <td>${byBranch[b].done}</td>
       <td>${byBranch[b].progress}</td>
       <td>${byBranch[b].notstarted}</td>
+      <td>${byBranch[b].uTotal}</td>
+      <td>${byBranch[b].uDone}</td>
     </tr>`).join('');
 }
 
