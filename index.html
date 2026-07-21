@@ -300,7 +300,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, doc, setDoc, updateDoc, deleteDoc,
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -566,9 +566,9 @@ window.deleteMachine = async function(id){
 };
 
 // ============================================================
-// ADMIN
+// ADMIN — passcode is stored in Firestore (config/admin, field "passcode"),
+// not in this file, so it never appears in the public GitHub source.
 // ============================================================
-const ADMIN_PASSCODE = "lhb-admin-2026"; // เปลี่ยนรหัสนี้ก่อนใช้งานจริง
 
 function checkAdminSession(){
   if(sessionStorage.getItem('adminUnlocked') === '1'){
@@ -584,16 +584,27 @@ function refreshAdminIfVisible(){
   }
 }
 
-document.getElementById('btnAdminUnlock').addEventListener('click', ()=>{
+document.getElementById('btnAdminUnlock').addEventListener('click', async ()=>{
+  if(!isConfigured){ toast('ตั้งค่า Firebase ก่อนใช้งาน'); return; }
   const val = document.getElementById('adminPasscode').value;
-  if(val === ADMIN_PASSCODE){
-    sessionStorage.setItem('adminUnlocked', '1');
-    document.getElementById('adminLocked').style.display = 'none';
-    document.getElementById('adminUnlocked').style.display = 'block';
-    renderAdminLists();
-    toast('เข้าสู่ระบบผู้ดูแลแล้ว');
-  }else{
-    toast('รหัสผ่านไม่ถูกต้อง');
+  try{
+    const snap = await getDoc(doc(db, 'config', 'admin'));
+    const correct = snap.exists() ? snap.data().passcode : null;
+    if(!correct){
+      toast('ยังไม่ได้ตั้งรหัสผ่านผู้ดูแลใน Firestore (config/admin)');
+      return;
+    }
+    if(val === correct){
+      sessionStorage.setItem('adminUnlocked', '1');
+      document.getElementById('adminLocked').style.display = 'none';
+      document.getElementById('adminUnlocked').style.display = 'block';
+      renderAdminLists();
+      toast('เข้าสู่ระบบผู้ดูแลแล้ว');
+    }else{
+      toast('รหัสผ่านไม่ถูกต้อง');
+    }
+  }catch(e){
+    toast('ตรวจสอบรหัสผ่านไม่สำเร็จ: ' + e.message);
   }
 });
 
