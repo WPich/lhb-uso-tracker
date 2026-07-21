@@ -27,7 +27,7 @@
   .stat-chip .l{font-size:10.5px; color:rgba(255,255,255,0.65); margin-top:1px;}
 
   .tabs{display:flex; position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line);}
-  .tab{flex:1; text-align:center; padding:13px 2px; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent; user-select:none;}
+  .tab{flex:1; text-align:center; padding:13px 1px; font-size:11.8px; font-weight:600; color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent; user-select:none;}
   .tab.active{color:var(--navy); border-bottom-color:var(--teal);}
 
   .view{display:none; padding:16px; flex:1;}
@@ -84,6 +84,39 @@
   .step-row.danger.checked label{color:var(--red); opacity:.6;}
   .step-warn{font-size:11.5px; color:var(--red); line-height:1.55; margin-top:5px; font-weight:600;}
 
+  .detail-btn{background:none; border:none; color:var(--teal); font-size:11.5px; font-weight:700; cursor:pointer; padding:3px 0; margin-top:2px;}
+  .detail-btn:hover{text-decoration:underline;}
+  .detail-box{display:none; margin-top:6px; padding:10px 12px; background:#F4F7F8; border-left:3px solid var(--teal); border-radius:0 8px 8px 0; font-size:12px; line-height:1.65; color:var(--ink-soft);}
+  .detail-box.open{display:block;}
+  .detail-box b{color:var(--ink); display:block; margin:6px 0 2px;}
+  .detail-box b:first-child{margin-top:0;}
+  .detail-box .warn{color:var(--red); font-weight:600;}
+  .detail-box code{background:#E4EAEC; padding:1px 5px; border-radius:4px; font-size:11px; word-break:break-all; color:var(--ink);}
+
+  .guide-sec{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;}
+  .guide-sec-head{padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--navy); color:#fff;}
+  .guide-sec-head .t{font-weight:700; font-size:14px;}
+  .guide-sec-head .s{font-size:11.5px; color:rgba(255,255,255,.7); margin-top:2px;}
+  .guide-sec-head .caret{font-size:13px; opacity:.8;}
+  .guide-body{display:none; padding:6px 16px 14px;}
+  .guide-body.open{display:block;}
+  .guide-step{padding:13px 0; border-bottom:1px solid var(--line);}
+  .guide-step:last-child{border-bottom:none;}
+  .guide-step-title{display:flex; gap:9px; align-items:flex-start; font-weight:700; font-size:13.6px; color:var(--ink);}
+  .guide-num{background:var(--teal); color:#fff; width:21px; height:21px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11.5px; flex-shrink:0; margin-top:1px;}
+  .guide-step.danger .guide-num{background:var(--red);}
+  .guide-step.danger .guide-step-title{color:var(--red);}
+  .guide-detail{margin:7px 0 0 30px; font-size:12.2px; line-height:1.7; color:var(--ink-soft);}
+  .guide-detail b{color:var(--ink); display:block; margin:7px 0 2px;}
+  .guide-detail b:first-child{margin-top:0;}
+  .guide-detail .warn{color:var(--red); font-weight:600;}
+  .guide-detail code{background:#EEF1F3; padding:1px 5px; border-radius:4px; font-size:11px; word-break:break-all; color:var(--ink);}
+  .ref-row{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px;}
+  .ref-row:last-child{border-bottom:none;}
+  .ref-row .k{font-weight:700; color:var(--ink-soft); flex-shrink:0; width:96px;}
+  .ref-row .v{word-break:break-all; color:var(--ink);}
+  .ref-row .v a{color:var(--teal);}
+
   .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
   .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
   .logon-head{padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;}
@@ -133,9 +166,10 @@
 
   <div class="tabs">
     <div class="tab active" data-tab="checkin">เช็คอิน</div>
-    <div class="tab" data-tab="machines">รายการเครื่อง</div>
-    <div class="tab" data-tab="summary">สรุปภาพรวม</div>
-    <div class="tab" data-tab="admin">ผู้ดูแลระบบ</div>
+    <div class="tab" data-tab="machines">เครื่อง</div>
+    <div class="tab" data-tab="guide">คู่มือ</div>
+    <div class="tab" data-tab="summary">สรุป</div>
+    <div class="tab" data-tab="admin">ผู้ดูแล</div>
   </div>
 
   <!-- CHECK-IN -->
@@ -184,6 +218,31 @@
       1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่อง
     </div>
     <div id="machinesWrap"><div class="loading">กำลังโหลด…</div></div>
+  </div>
+
+  <!-- GUIDE -->
+  <div class="view" id="view-guide">
+    <h2 class="section-title">ข้อมูลอ้างอิง</h2>
+    <div class="card">
+      <div class="ref-row"><div class="k">SSO URL</div><div class="v"><a href="https://w2apspho1v1sso.lhb.net:8443/usoserver" target="_blank" rel="noopener">w2apspho1v1sso.lhb.net:8443/usoserver</a></div></div>
+      <div class="ref-row"><div class="k">เวอร์ชัน</div><div class="v"><strong>5.6.2.0040-GA-E38</strong> <span style="color:var(--ink-soft); font-size:11.5px;">(เวอร์ชันที่ใช้งานปัจจุบัน)</span></div></div>
+      <div class="ref-row"><div class="k">ไฟล์ติดตั้ง</div><div class="v"><code>H:\Information Technology Department\Information Technology Security Division\Sec 1\SSO\i-sprint\5.6.2.0040-GA-E38\5.6.2.0040-GA-E38\USOClient\AllUser</code></div></div>
+      <div class="ref-row"><div class="k">Public Desktop</div><div class="v"><code>C:\Users\Public\Desktop</code></div></div>
+      <div class="ref-row"><div class="k">Startup</div><div class="v"><code>C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup</code></div></div>
+      <div class="ref-row"><div class="k">Admin User</div><div class="v">TITN005 <span style="color:var(--ink-soft); font-size:11.5px;">(รหัสผ่านขอจากทีม IT หน้างาน — ไม่เก็บไว้บนเว็บ)</span></div></div>
+    </div>
+
+    <h2 class="section-title">ขั้นตอนการติดตั้ง</h2>
+    <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">แตะที่หัวข้อเพื่อเปิด/ปิดรายละเอียด</div>
+    <div id="guideWrap"></div>
+
+    <h2 class="section-title">รายการแอปอ้างอิง</h2>
+    <div class="card">
+      <div style="font-size:12px; color:var(--ink-soft); line-height:1.6; margin-bottom:10px;">
+        14 แอปที่อยู่ในขอบเขต SSO — ผู้ใช้แต่ละคนอาจใช้แค่บางแอป ไม่จำเป็นต้องครบทุกตัว
+      </div>
+      <div class="app-chip-grid" id="guideAppList"></div>
+    </div>
   </div>
 
   <!-- SUMMARY -->
@@ -277,42 +336,120 @@ const db = getFirestore(app);
 
 /* ---------------- checklist definitions ---------------- */
 const ADMIN_STEPS = [
-  { label:'เปลี่ยนเป็น User Administrator (TITN005)' },
-  { label:'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)' },
-  { label:'Copy Icon SSO ไปที่ Startup folder' },
+  { label:'เปลี่ยนเป็น User Administrator (TITN005)',
+    how:'Start &gt; Switch User &gt; Login ด้วย TITN005',
+    caution:'ขอรหัสผ่าน Admin จากทีม IT หน้างาน' },
+
+  { label:'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
+    how:'1. ตั้งค่า AS400PRD หรือ AS400DWH ตาม Session เดิม (Printer)<br>2. ลบ Shortcut เก่าบน Desktop ก่อน<br>3. สร้าง Shortcut ใหม่ไว้ที่ Public Desktop',
+    record:'Path: <code>C:\\Users\\Public\\Desktop</code>',
+    caution:'ต้องลบ Shortcut เก่าก่อนสร้างใหม่ เพื่อไม่ให้ซ้ำ · ใช้ Public Desktop เพื่อให้ทุก User เห็น' },
+
+  { label:'Copy Icon SSO ไปที่ Startup folder',
+    how:'Copy shortcut USO Client ไปวางที่ Startup folder',
+    record:'Path: <code>C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup</code>',
+    caution:'เพื่อให้ SSO เปิดอัตโนมัติทุกครั้งที่เปิดเครื่อง' },
+
   { label:'ถอนการติดตั้ง (Uninstall) NetIQ',
     danger:true,
-    warn:'ห้ามทำก่อนเก็บรหัสผ่านครบ! ต้อง Export User/Password ทุกแอปของผู้ใช้งาน "ทุกคน" ที่ใช้เครื่องนี้ให้เสร็จก่อน (Section 1 ข้อ 2) — ถอนแล้วรหัสผ่านเดิมกู้คืนไม่ได้' },
-  { label:'ติดตั้ง (Install) USO Client — AllUser' },
-  { label:'รีสตาร์ทเครื่อง (Reboot)' }
+    warn:'ห้ามทำก่อนเก็บรหัสผ่านครบ! ต้อง Export User/Password ทุกแอปของผู้ใช้งาน "ทุกคน" ที่ใช้เครื่องนี้ให้เสร็จก่อน (Section 1 ข้อ 2) — ถอนแล้วรหัสผ่านเดิมกู้คืนไม่ได้',
+    how:'Control Panel &gt; Programs &gt; Uninstall &gt; NETIQ SSO',
+    caution:'ต้องมั่นใจว่าเก็บข้อมูล User/Password ครบแล้ว "ทุกคน" ที่ใช้เครื่องนี้ (Section 1 ข้อ 2) — เครื่องสาขาส่วนใหญ่มีผู้ใช้งานหลายคน' },
+
+  { label:'ติดตั้ง (Install) USO Client — AllUser',
+    how:'เปิดไฟล์ติดตั้งจาก Path ที่ระบุในหน้าข้อมูลอ้างอิง &gt; Next &gt; Install',
+    caution:'เลือกแบบ AllUser installation · ต้องเป็นเวอร์ชัน 5.6.2.0040-GA-E38 เท่านั้น — เคยพบปัญหาเครื่องช้าและ Log out ไม่ออกจากการลงผิดเวอร์ชัน' },
+
+  { label:'รีสตาร์ทเครื่อง (Reboot)',
+    how:'Restart computer',
+    caution:'รอให้เครื่องเปิดขึ้นมาใหม่สมบูรณ์ก่อนทำขั้นตอนถัดไป' }
 ];
+
 const S1_EXPORT_IDX = 1; // ดัชนีขั้นตอน "Export User/Password จาก NETIQ" ใน Section 1
+
 const S1 = [
-  'ตรวจสอบ USO Extension บน Chrome/Edge',
-  'Export User/Password จาก NETIQ ทุกแอปที่ใช้งาน',
-  'จดค่า Configure AS400 (System Name/ID/Format) + ถ่ายรูปหน้าจอ',
-  'ปิดการใช้งาน (Disable) NetIQ ที่ System Tray',
-  'ทดสอบ Login ทุกแอปด้วยตนเอง'
+  { label:'ตรวจสอบ USO Extension บน Chrome/Edge',
+    how:'เปิด Chrome &gt; ⋮ &gt; Extensions<br>เปิด Edge &gt; ⋯ &gt; Extensions',
+    record:'ดูว่ามี USO Extension ติดตั้งอยู่หรือยัง',
+    caution:'ถ้ายังไม่มี ให้ข้ามไปก่อน แล้วติดตั้งทีหลังตอน Install USO Client' },
+
+  { label:'Export User/Password จาก NETIQ ทุกแอปที่ใช้งาน',
+    how:'เปิดโปรแกรม NETIQ &gt; คลิกแต่ละ App &gt; กด Show Password &gt; คัดลอกไปบันทึกในไฟล์ List App',
+    record:'บันทึก: Artifact (ชื่อ App ใน NETIQ) · Computer Name · User Log-on · URL ของแต่ละแอป · Account (Username) · Password',
+    caution:'สำคัญที่สุด! ต้องเก็บให้ครบทุกแอปก่อน Uninstall NETIQ เพราะเอากลับมาไม่ได้ · เก็บในไฟล์ที่ควบคุมสิทธิ์เท่านั้น ห้ามบันทึกรหัสผ่านลงเว็บนี้',
+    danger:true },
+
+  { label:'จดค่า Configure AS400 (System Name/ID/Format) + ถ่ายรูปหน้าจอ',
+    how:'เปิด Session AS400PRD และ AS400DWH (ถ้ามี) &gt; ดูหน้า Configure',
+    record:'บันทึก: SYSTEM NAME (ชื่อ Server) · ID · Format Compose',
+    caution:'ถ่ายรูปหน้าจอเก็บไว้ด้วยเพื่อความชัวร์' },
+
+  { label:'ปิดการใช้งาน (Disable) NetIQ ที่ System Tray',
+    how:'คลิกขวาที่ไอคอน NETIQ ใน System Tray &gt; Disable',
+    caution:'ปิดไว้ก่อนเท่านั้น ยังไม่ต้อง Uninstall ในขั้นตอนนี้' },
+
+  { label:'ทดสอบ Login ทุกแอปด้วยตนเอง',
+    how:'เปิดแต่ละแอป &gt; Login ด้วย User/Password ที่บันทึกไว้',
+    record:'ผลลัพธ์: Login ได้ / Login ไม่ได้ (แอปไหนไม่ผ่านให้กลับไปตรวจข้อ 2)',
+    caution:'ขั้นตอนนี้คือด่านยืนยันว่ารหัสผ่านที่เก็บไว้ถูกต้องจริง ก่อนจะถอน NetIQ' }
 ];
+
 const S3 = [
-  'เปลี่ยนกลับเป็น User ปกติ (Switch User)',
-  'เปิด SSO ผ่าน Shortcut URL',
-  'ลงทะเบียนแอปใน Self Service Portal (Enable + Sign off)',
-  'Import User/Password ผ่าน USO Client',
-  'กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin/AS400 ก่อน)',
-  'ทดสอบ Login ทุกแอปผ่าน SSO (Auto-login)',
-  'ให้ End User ทดสอบและยืนยันครั้งสุดท้าย'
+  { label:'เปลี่ยนกลับเป็น User ปกติ (Switch User)',
+    how:'Switch User กลับไปที่ Profile ของ End User',
+    record:'ผลที่คาดหวัง: เข้า Desktop ของ User ปกติได้' },
+
+  { label:'เปิด SSO ผ่าน Shortcut URL',
+    how:'Double-click ที่ SSO Shortcut บน Desktop',
+    record:'ผลที่คาดหวัง: เปิดหน้าเว็บ SSO Portal ได้',
+    caution:'ถ้าเปิดไม่ได้ ให้ตรวจสอบ URL ในหน้าข้อมูลอ้างอิง' },
+
+  { label:'ลงทะเบียนแอปใน Self Service Portal (Enable + Sign off)',
+    how:'สอบถาม User ว่า Account AD ชื่ออะไร &gt; ทำตามคู่มือเพื่อ Assign Application ให้ User นั้น',
+    record:'หลัง Assign เสร็จ ให้เช็คว่าแอปขึ้นครบใน USO Client List',
+    caution:'ต้อง Enable เฉพาะแอปที่ User คนนั้นใช้งานจริง · ตั้งค่าเสร็จต้องกด Sign off ที่โปรแกรมทุกครั้ง ข้อมูลถึงจะอัปเดต' },
+
+  { label:'Import User/Password ผ่าน USO Client',
+    how:'เปิดโปรแกรม USO Client &gt; ตรวจสอบว่า URL/App ขึ้นครบ &gt; Import User/Password ที่เก็บไว้จาก Section 1 ข้อ 2',
+    record:'ผลที่คาดหวัง: แอปแสดงใน USO Client ครบตามที่ Assign ไว้',
+    caution:'ถ้าแอปไม่ขึ้น ให้กลับไปทำข้อ 3 (ลงทะเบียนใน Self Service Portal) ใหม่' },
+
+  { label:'กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin/AS400 ก่อน)',
+    how:'<b style="display:inline;">ทำ IBMLogin ก่อนเสมอ:</b> คลิกขวาที่ App <code>IBMLogin</code> &gt; Reset App Info &gt; กรอก User และ Password<br><br>ไม่ต้องกรอกรหัสที่ App AS400PRD เพราะรหัสจาก IBMLogin จะแชร์ให้อัตโนมัติ<br><br><b style="display:inline;">แอปทั่วไป:</b> คลิกขวาที่ชื่อแอปนั้น &gt; Reset App Info &gt; กรอก User/Password ตามปกติ<br><br><b style="display:inline;">แอปที่เป็น LDAP Authen</b> (E-Form, eKYC, Fund Flow, Internal Blacklist) กรอกแค่แอปใดแอปหนึ่ง รหัสผ่านจะถูกแชร์ให้กันเองอัตโนมัติ',
+    record:'ผลที่คาดหวัง: AS400 ต้อง Login ได้ ถ้า User/Password ถูกต้อง',
+    caution:'ลำดับสำคัญมาก — ถ้าไม่ทำ IBMLogin ก่อน AS400 จะ Login ไม่ผ่าน' },
+
+  { label:'ทดสอบ Login ทุกแอปผ่าน SSO (Auto-login)',
+    how:'เข้าผ่าน Icon Intranet ของ LHB หรือคลิกที่แต่ละแอปใน USO Client &gt; ตรวจสอบว่า Auto-login ได้',
+    record:'ผลที่คาดหวัง: URL Internal และ AS400PRD/DWH Login ได้อัตโนมัติ',
+    caution:'ถ้าไม่ผ่าน ให้ตรวจ User/Password ที่ Import และตรวจว่าชื่อแอปตรงกับที่ Enable ใน SSO Portal' },
+
+  { label:'ให้ End User ทดสอบและยืนยันครั้งสุดท้าย',
+    how:'ติดต่อ End User เจ้าของเครื่อง &gt; ให้ทดสอบ Login ทุกแอปด้วยตัวเอง',
+    record:'ผลที่คาดหวัง: User ยืนยันว่าใช้งานได้ปกติ = เสร็จสมบูรณ์' }
 ];
+
 const APPS = [
   'Fund Flow','Selling Agent','Internal Blacklist','BDS web','BDS Main','Fee Payment','AS400 (Prod)',
   'E-Form','IBAM','Pinpad Client','CMS (ATM)','eKYC','Collection (New)','FTP Init Parameter'
 ];
+
+const GUIDE_SECTIONS = [
+  { key:'s1', title:'Section 1 · ก่อนติดตั้ง (User ปกติ)',
+    sub:'ทำกับผู้ใช้งาน "ทุกคน" ที่ใช้เครื่องนี้ — เก็บข้อมูลก่อนเปลี่ยนระบบ', steps:S1 },
+  { key:'s2', title:'Section 2 · ติดตั้งเครื่อง (Administrator)',
+    sub:'ทำครั้งเดียวต่อเครื่อง — Login ด้วย Admin', steps:ADMIN_STEPS },
+  { key:'s3', title:'Section 3 · หลัง Reboot (User ปกติ)',
+    sub:'ทำกับผู้ใช้งาน "ทุกคน" ที่ใช้เครื่องนี้ — ตั้งค่า SSO ให้ใช้งานได้', steps:S3 }
+];
+
 const LOGON_TOTAL = S1.length + S3.length;
 
 /* ---------------- state ---------------- */
 let machines = [], logons = [], checkins = [];
 let ready = { machines:false, logons:false, checkins:false };
 let openMachines = new Set(), openLogons = new Set();
+let openDetails = new Set(), openGuide = new Set(['s1']);
 let drafts = new Map();          // machineId -> half-typed logon name
 let lastError = null;
 
@@ -554,6 +691,7 @@ function renderMachines(){
             <div>
               <label for="a-${m.id}-${i}">${s.danger ? '⚠️ ' : ''}${esc(s.label)}</label>
               ${s.warn ? `<div class="step-warn">${esc(s.warn)}</div>` : ''}
+              ${detailToggle(s, m.id + '-admin-' + i)}
             </div>
           </div>`).join('')}
 
@@ -582,9 +720,9 @@ function logonCard(l){
     <div class="mini-track"><div class="mini-fill" style="width:${Math.round(done/LOGON_TOTAL*100)}%"></div></div>
     <div class="logon-steps ${openLogons.has(l.id) ? 'open' : ''}" id="lp-${l.id}">
       <div class="section-divider">Section 1 · ก่อนติดตั้ง</div>
-      ${S1.map((label,i) => stepRow(l,'section1',i,label)).join('')}
+      ${S1.map((s,i) => stepRow(l,'section1',i,s)).join('')}
       <div class="section-divider">Section 3 · หลัง Reboot</div>
-      ${S3.map((label,i) => stepRow(l,'section3',i,label)).join('')}
+      ${S3.map((s,i) => stepRow(l,'section3',i,s)).join('')}
       <div class="app-ref-note">แอปที่ใช้งาน — อ้างอิงเท่านั้น ไม่ต้องครบทุกแอป (แตะเพื่อสลับ: ไม่ใช้งาน → Export แล้ว → Import แล้ว)</div>
       <div class="app-chip-grid">
         ${APPS.map((name,i) => {
@@ -598,13 +736,31 @@ function logonCard(l){
     </div>
   </div>`;
 }
-function stepRow(l, section, i, label){
+/* Builds the "วิธีทำ / ข้อควรระวัง" body once, reused by the checklist and the guide tab. */
+function detailHtml(s){
+  if(!s.how && !s.record && !s.caution) return '';
+  return (s.how ? '<b>วิธีทำ</b>' + s.how : '')
+       + (s.record ? '<b>สิ่งที่ต้องบันทึก / ผลลัพธ์</b>' + s.record : '')
+       + (s.caution ? '<b>ข้อควรระวัง</b><span class="' + (s.danger ? 'warn' : '') + '">' + s.caution + '</span>' : '');
+}
+function detailToggle(s, key){
+  const body = detailHtml(s);
+  if(!body) return '';
+  return `<button class="detail-btn" data-act="detail" data-key="${key}">วิธีทำ / ข้อควรระวัง ▾</button>
+          <div class="detail-box ${openDetails.has(key) ? 'open' : ''}" id="d-${key}">${body}</div>`;
+}
+
+function stepRow(l, section, i, s){
   const on = l[section][i];
+  const key = l.id + '-' + section + '-' + i;
   return `
-    <div class="step-row ${on ? 'checked' : ''}">
+    <div class="step-row ${s.danger ? 'danger' : ''} ${on ? 'checked' : ''}">
       <input type="checkbox" id="s-${l.id}-${section}-${i}" ${on ? 'checked' : ''}
              data-act="logon-step" data-id="${l.id}" data-sec="${section}" data-i="${i}">
-      <label for="s-${l.id}-${section}-${i}">${esc(label)}</label>
+      <div>
+        <label for="s-${l.id}-${section}-${i}">${s.danger ? '⚠️ ' : ''}${esc(s.label)}</label>
+        ${detailToggle(s, key)}
+      </div>
     </div>`;
 }
 
@@ -623,6 +779,16 @@ document.addEventListener('click', async e => {
   if(act === 'toggle-machine'){
     openMachines.has(id) ? openMachines.delete(id) : openMachines.add(id);
     $('panel-' + id)?.classList.toggle('open');
+  }
+  if(act === 'detail'){
+    const key = el.dataset.key;
+    openDetails.has(key) ? openDetails.delete(key) : openDetails.add(key);
+    $('d-' + key)?.classList.toggle('open');
+  }
+  if(act === 'guide-sec'){
+    openGuide.has(id) ? openGuide.delete(id) : openGuide.add(id);
+    $('g-' + id)?.classList.toggle('open');
+    el.querySelector('.caret').textContent = openGuide.has(id) ? '▲' : '▼';
   }
   if(act === 'toggle-logon'){
     openLogons.has(id) ? openLogons.delete(id) : openLogons.add(id);
@@ -728,6 +894,33 @@ document.addEventListener('change', async e => {
     }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
   }
 });
+
+/* ---------------- guide tab ---------------- */
+function renderGuide(){
+  $('guideWrap').innerHTML = GUIDE_SECTIONS.map(sec => `
+    <div class="guide-sec">
+      <div class="guide-sec-head" data-act="guide-sec" data-id="${sec.key}">
+        <div>
+          <div class="t">${esc(sec.title)}</div>
+          <div class="s">${esc(sec.sub)}</div>
+        </div>
+        <div class="caret">${openGuide.has(sec.key) ? '▲' : '▼'}</div>
+      </div>
+      <div class="guide-body ${openGuide.has(sec.key) ? 'open' : ''}" id="g-${sec.key}">
+        ${sec.steps.map((s,i) => `
+          <div class="guide-step ${s.danger ? 'danger' : ''}">
+            <div class="guide-step-title">
+              <div class="guide-num">${i+1}</div>
+              <div>${s.danger ? '⚠️ ' : ''}${esc(s.label)}</div>
+            </div>
+            ${detailHtml(s) ? `<div class="guide-detail">${detailHtml(s)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  $('guideAppList').innerHTML = APPS.map(a => `<div class="app-chip">${esc(a)}</div>`).join('');
+}
+renderGuide();
 
 /* ---------------- summary + stats ---------------- */
 function renderSummary(){
@@ -868,7 +1061,7 @@ $('btnExportMachines').addEventListener('click', () => {
 $('btnExportLogons').addEventListener('click', () => {
   downloadCsv('uso_users_report.csv', [
     ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
-     ...S1.map(s => 'S1: ' + s), ...S3.map(s => 'S3: ' + s), ...APPS.map(a => 'App: ' + a)],
+     ...S1.map(s => 'S1: ' + s.label), ...S3.map(s => 'S3: ' + s.label), ...APPS.map(a => 'App: ' + a)],
     ...logons.map(l => [
       l.branch, l.computer, l.userName, statusLabel(statusOf(logonDone(l), LOGON_TOTAL)),
       logonDone(l), LOGON_TOTAL, fmtTime(l.createdAt), fmtTime(l.completedAt),
