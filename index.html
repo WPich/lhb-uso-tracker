@@ -321,7 +321,8 @@
    <div class="narrow">
     <h2 class="section-title">ข้อมูลอ้างอิง</h2>
     <div class="card">
-      <div class="ref-row"><div class="k">SSO URL</div><div class="v"><a href="https://w2apspho1v1sso.lhb.net:8443/usoserver" target="_blank" rel="noopener">w2apspho1v1sso.lhb.net:8443/usoserver</a></div></div>
+      <div class="ref-row"><div class="k">SSO Portal</div><div class="v"><a href="https://w2apspho1v1sso.lhb.net:8443/usoserver" target="_blank" rel="noopener">w2apspho1v1sso.lhb.net:8443/usoserver</a></div></div>
+      <div class="ref-row"><div class="k">Admin Console</div><div class="v"><code>https://w2apspho101sso.lhb.net:8443/am5</code><br><span style="color:var(--ink-soft); font-size:11.5px;">ใช้ตอนกำหนดสิทธิ์แอปให้ User · บัญชี admin ขอจากทีม IT ไม่เก็บไว้บนเว็บ</span></div></div>
       <div class="ref-row"><div class="k">เวอร์ชัน</div><div class="v"><strong>5.6.2.0039-GA-E37</strong> <span style="color:var(--ink-soft); font-size:11.5px;">(เวอร์ชันที่ใช้งานปัจจุบัน)</span></div></div>
       <div class="ref-row"><div class="k">Packet ติดตั้ง</div><div class="v"><code>H:\Information Technology Department\Information Technology Security Division\Sec 1\SSO\i-sprint\PacketUSO_Update_08-07-2026</code></div></div>
       <div class="ref-row"><div class="k">ใน Packet</div><div class="v">
@@ -532,10 +533,21 @@ const S3 = [
     record:'ผลที่คาดหวัง: เปิดหน้าเว็บ SSO Portal ได้',
     caution:'ถ้าเปิดไม่ได้ ให้ตรวจสอบ URL ในหน้าข้อมูลอ้างอิง' },
 
-  { label:'ลงทะเบียนแอปใน Self Service Portal (Enable + Sign off)',
-    how:'สอบถาม User ว่า Account AD ชื่ออะไร &gt; ทำตามคู่มือเพื่อ Assign Application ให้ User นั้น',
-    record:'หลัง Assign เสร็จ ให้เช็คว่าแอปขึ้นครบใน USO Client List',
-    caution:'ต้อง Enable เฉพาะแอปที่ User คนนั้นใช้งานจริง · ตั้งค่าเสร็จต้องกด Sign off ที่โปรแกรมทุกครั้ง ข้อมูลถึงจะอัปเดต' },
+  { label:'กำหนดสิทธิ์แอปให้ User ผ่าน Admin Console',
+    how:'ถาม User ก่อนว่า Account AD ชื่ออะไร (เช่น P5461) แล้วทำตามนี้<br><br>'
+      + '1. เปิด Chrome ไปที่ <code>https://w2apspho101sso.lhb.net:8443/am5</code> &gt; Login ด้วยบัญชี admin (ขอรหัสจากทีม IT)<br>'
+      + '2. ไปที่ <b style="display:inline;">Operation Dashboard &gt; User &amp; Segment &gt; User</b><br>'
+      + '3. ช่อง <b style="display:inline;">User Id</b> = ใส่ User AD ของผู้ใช้ · ช่อง <b style="display:inline;">User Store</b> = เลือก <code>LHB-AD</code> &gt; กด <b style="display:inline;">Search</b><br>'
+      + '4. คลิกที่ User Id ที่ขึ้นในผลการค้นหา<br>'
+      + '5. ไปแท็บ <b style="display:inline;">USO Entitlements</b> &gt; กด <b style="display:inline;">Edit</b><br>'
+      + '6. ติ๊ก checkbox คอลัมน์ <b style="display:inline;">User Entitlement</b> เฉพาะแอปที่ User คนนั้นมีสิทธิ์ใช้งาน<br>'
+      + '7. กด <b style="display:inline;">Save</b>',
+    record:'ตรวจคอลัมน์ <b style="display:inline;">Password Sharing</b> ด้านขวาด้วย:<br>'
+      + '• <code>AS400PRD</code>, <code>IMBLogin</code>, <code>FTP</code>, <code>FTPD</code> ต้องอยู่กลุ่ม <code>AS400</code><br>'
+      + '• <code>EKYC</code>, <code>Fund Flow</code>, <code>E-FORM</code>, <code>Internal Blacklist</code> อยู่กลุ่ม <code>LdapApp</code><br>'
+      + 'แอปที่อยู่กลุ่มเดียวกันจะแชร์รหัสผ่านให้กันอัตโนมัติ<br><br>'
+      + 'เสร็จแล้วเช็คว่าแอปขึ้นครบใน USO Client List',
+    caution:'Enable เฉพาะแอปที่ User ใช้งานจริง ไม่ต้องติ๊กหมด · ตั้งค่าเสร็จต้องกด Sign off ที่โปรแกรมทุกครั้ง ข้อมูลถึงจะอัปเดต · ถ้ากลุ่ม Password Sharing ไม่ถูก จะทำให้ AS400 Login ไม่ผ่าน' },
 
   { label:'Import User/Password ผ่าน USO Client',
     how:'เปิดโปรแกรม USO Client &gt; ตรวจสอบว่า URL/App ขึ้นครบ &gt; Import User/Password ที่เก็บไว้จาก Section 1 ข้อ 2',
@@ -543,9 +555,16 @@ const S3 = [
     caution:'ถ้าแอปไม่ขึ้น ให้กลับไปทำข้อ 3 (ลงทะเบียนใน Self Service Portal) ใหม่' },
 
   { label:'กรอกรหัสผ่านครั้งแรกตามลำดับ (IBMLogin/AS400 ก่อน)',
-    how:'<b style="display:inline;">ทำ IBMLogin ก่อนเสมอ:</b> คลิกขวาที่ App <code>IBMLogin</code> &gt; Reset App Info &gt; กรอก User และ Password<br><br>ไม่ต้องกรอกรหัสที่ App AS400PRD เพราะรหัสจาก IBMLogin จะแชร์ให้อัตโนมัติ<br><br><b style="display:inline;">แอปทั่วไป:</b> คลิกขวาที่ชื่อแอปนั้น &gt; Reset App Info &gt; กรอก User/Password ตามปกติ<br><br><b style="display:inline;">แอปที่เป็น LDAP Authen</b> (E-Form, eKYC, Fund Flow, Internal Blacklist) กรอกแค่แอปใดแอปหนึ่ง รหัสผ่านจะถูกแชร์ให้กันเองอัตโนมัติ',
-    record:'ผลที่คาดหวัง: AS400 ต้อง Login ได้ ถ้า User/Password ถูกต้อง',
-    caution:'ลำดับสำคัญมาก — ถ้าไม่ทำ IBMLogin ก่อน AS400 จะ Login ไม่ผ่าน' },
+    how:'<b style="display:inline;">AS400 First Login — ทำก่อนแอปอื่นเสมอ</b><br>'
+      + '1. เปิด USO Client จากไอคอนที่ Taskbar<br>'
+      + '2. คลิกขวาที่ <code>IBMLogin</code> ในรายการ &gt; เลือก <b style="display:inline;">Reset App Info</b><br>'
+      + '3. กรอก User ID, Password, Confirm Password &gt; กด <b style="display:inline;">OK</b><br>'
+      + '4. ดับเบิลคลิก Shortcut <code>AS400PRD</code> ที่หน้า Desktop เพื่อ Login<br>'
+      + '5. ไม่ต้องกรอกรหัสที่ AS400PRD ซ้ำ เพราะรหัสจาก IBMLogin แชร์ให้อัตโนมัติ (กลุ่ม AS400)<br><br>'
+      + '<b style="display:inline;">แอปทั่วไป:</b> คลิกขวาที่ชื่อแอปนั้น &gt; Reset App Info &gt; กรอก User/Password ตามปกติ<br><br>'
+      + '<b style="display:inline;">แอปกลุ่ม LDAP</b> (E-Form, eKYC, Fund Flow, Internal Blacklist) กรอกแค่แอปใดแอปหนึ่ง รหัสผ่านจะแชร์ให้กันเองอัตโนมัติ',
+    record:'ผลที่คาดหวัง: ขึ้นหน้าจอ <b style="display:inline;">Sign-on Information</b> ของ AS400 (System: AS400P4) และ USO Client ขึ้นสถานะ Application matched',
+    caution:'ลำดับสำคัญมาก — ถ้าไม่ทำ IBMLogin ก่อน AS400 จะ Login ไม่ผ่าน · ถ้ายังไม่ผ่านให้ย้อนไปเช็คกลุ่ม Password Sharing ในข้อ 3' },
 
   { label:'ทดสอบ Login ทุกแอปผ่าน SSO (Auto-login)',
     how:'เข้าผ่าน Icon Intranet ของ LHB หรือคลิกที่แต่ละแอปใน USO Client &gt; ตรวจสอบว่า Auto-login ได้',
