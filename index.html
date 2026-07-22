@@ -137,6 +137,44 @@
   .lightbox img{max-width:100%; max-height:92vh; border-radius:8px;}
   .lightbox .close{position:absolute; top:14px; right:18px; color:#fff; font-size:30px; background:none; border:none; cursor:pointer; line-height:1;}
 
+  /* Phones keep the single stacked column. On a desktop monitor the same markup
+     spreads into sidebar + main area instead of a narrow strip down the middle. */
+  .two-col{display:block;}
+  .narrow{max-width:100%;}
+
+  @media (min-width:900px){
+    body{background:#E9ECEF;}
+    .app{max-width:1180px; box-shadow:0 0 0 1px rgba(0,0,0,.06);}
+    .badge{padding:26px 32px 24px;}
+    .badge-title{font-size:24px;}
+    .badge-sub{font-size:14px;}
+    .badge-stats{max-width:640px;}
+    .stat-chip .n{font-size:21px;}
+    .stat-chip .l{font-size:11.5px;}
+    .tab{padding:15px 4px; font-size:14px;}
+    .view{padding:24px 32px 44px;}
+
+    .two-col{display:grid; grid-template-columns:340px minmax(0,1fr); gap:26px; align-items:start;}
+    .col-side{position:sticky; top:74px;}
+    .narrow{max-width:880px;}
+
+    .machine-head{padding:16px 20px;}
+    .machine-id{font-size:16px;}
+    .steps-panel{padding:0 20px 20px;}
+    .step-row, .step-row label{font-size:14.2px;}
+    .photo-item{width:92px; height:92px;}
+    .checkin-row{padding:11px 0;}
+    .summary-table{font-size:13.4px;}
+    .guide-sec-head{padding:16px 20px;}
+    .guide-body{padding:8px 20px 18px;}
+    .ref-row .k{width:122px;}
+  }
+
+  @media (min-width:1280px){
+    .app{max-width:1320px;}
+    .two-col{grid-template-columns:380px minmax(0,1fr); gap:32px;}
+  }
+
   .section-divider{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); margin:16px 0 8px;}
   .logon-card{background:#fbfbfc; border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden;}
   .logon-head{padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;}
@@ -177,6 +215,7 @@
     <div class="badge-eyebrow">LH Bank · i-Sprint SSO</div>
     <div class="badge-title">USO Deployment Tracker</div>
     <div class="badge-sub">Uninstall NetIQ → Install USO Client → Migrate apps</div>
+    <div style="font-size:11px; color:rgba(255,255,255,.55); margin-top:3px;">USO Client 5.6.2.0039-GA-E37</div>
     <div class="badge-stats">
       <div class="stat-chip"><div class="n" id="statTotal">–</div><div class="l">เครื่องทั้งหมด</div></div>
       <div class="stat-chip"><div class="n" id="statDone">–</div><div class="l">ติดตั้งเสร็จ</div></div>
@@ -194,6 +233,8 @@
 
   <!-- CHECK-IN -->
   <div class="view active" id="view-checkin">
+   <div class="two-col">
+    <div class="col-side">
     <h2 class="section-title">เช็คอินเข้างาน</h2>
     <div class="card">
       <label>ชื่อผู้ปฏิบัติงาน (Outsource)</label>
@@ -211,12 +252,18 @@
       <textarea id="checkinNote" rows="2" placeholder="เช่น เริ่มงาน 09:00, รอ IT support เปิดสิทธิ์"></textarea>
       <button class="btn" id="btnCheckin">เช็คอินตอนนี้</button>
     </div>
+    </div>
+    <div class="col-main">
     <h2 class="section-title">ประวัติเช็คอิน</h2>
     <div class="card" id="checkinLogWrap"><div class="loading">กำลังโหลด…</div></div>
+    </div>
+   </div>
   </div>
 
   <!-- MACHINES -->
   <div class="view" id="view-machines">
+   <div class="two-col">
+    <div class="col-side">
     <h2 class="section-title">เพิ่มเครื่องใหม่</h2>
     <div class="card">
       <label>สาขา</label>
@@ -235,10 +282,7 @@
       <input type="text" id="newStaffCustom" placeholder="พิมพ์ชื่อผู้รับผิดชอบ" style="display:none;">
       <button class="btn secondary" id="btnAddMachine">เพิ่มเครื่อง</button>
     </div>
-    <h2 class="section-title">รายการเครื่องทั้งหมด</h2>
-    <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">
-      1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน — เพิ่มผู้ใช้งานแยกในแต่ละเครื่อง
-    </div>
+    <h2 class="section-title">ค้นหา / กรอง</h2>
     <div class="filter-bar">
       <input type="text" id="mSearch" placeholder="🔍 ค้นหา ชื่อเครื่อง / สาขา / ผู้รับผิดชอบ / ชื่อผู้ใช้งาน">
       <select id="mBranch"><option value="all">ทุกสาขา</option></select>
@@ -261,16 +305,30 @@
         <button class="filter-clear" id="mReset">ล้างตัวกรอง</button>
       </div>
     </div>
+    </div>
+    <div class="col-main">
+    <h2 class="section-title">รายการเครื่องทั้งหมด</h2>
+    <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">
+      1 เครื่อง = ติดตั้ง 1 ครั้ง (Admin) แต่มีผู้ใช้งานได้หลายคน
+    </div>
     <div id="machinesWrap"><div class="loading">กำลังโหลด…</div></div>
+    </div>
+   </div>
   </div>
 
   <!-- GUIDE -->
   <div class="view" id="view-guide">
+   <div class="narrow">
     <h2 class="section-title">ข้อมูลอ้างอิง</h2>
     <div class="card">
       <div class="ref-row"><div class="k">SSO URL</div><div class="v"><a href="https://w2apspho1v1sso.lhb.net:8443/usoserver" target="_blank" rel="noopener">w2apspho1v1sso.lhb.net:8443/usoserver</a></div></div>
-      <div class="ref-row"><div class="k">เวอร์ชัน</div><div class="v"><strong>5.6.2.0040-GA-E38</strong> <span style="color:var(--ink-soft); font-size:11.5px;">(เวอร์ชันที่ใช้งานปัจจุบัน)</span></div></div>
-      <div class="ref-row"><div class="k">ไฟล์ติดตั้ง</div><div class="v"><code>H:\Information Technology Department\Information Technology Security Division\Sec 1\SSO\i-sprint\5.6.2.0040-GA-E38\5.6.2.0040-GA-E38\USOClient\AllUser</code></div></div>
+      <div class="ref-row"><div class="k">เวอร์ชัน</div><div class="v"><strong>5.6.2.0039-GA-E37</strong> <span style="color:var(--ink-soft); font-size:11.5px;">(เวอร์ชันที่ใช้งานปัจจุบัน)</span></div></div>
+      <div class="ref-row"><div class="k">Packet ติดตั้ง</div><div class="v"><code>H:\Information Technology Department\Information Technology Security Division\Sec 1\SSO\i-sprint\PacketUSO_Update_08-07-2026</code></div></div>
+      <div class="ref-row"><div class="k">ใน Packet</div><div class="v">
+        <strong>1. USO-ClientAgent</strong> — ตัวติดตั้ง USO Client<br>
+        <strong>2. USO-Icon_Shortcut</strong> — ไอคอน/Shortcut สำหรับ Public Desktop<br>
+        <strong>3. USO-Startup_Script</strong> — สคริปต์สำหรับ Startup folder
+      </div></div>
       <div class="ref-row"><div class="k">Public Desktop</div><div class="v"><code>C:\Users\Public\Desktop</code></div></div>
       <div class="ref-row"><div class="k">Startup</div><div class="v"><code>C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup</code></div></div>
       <div class="ref-row"><div class="k">Admin User</div><div class="v">TITN005 <span style="color:var(--ink-soft); font-size:11.5px;">(รหัสผ่านขอจากทีม IT หน้างาน — ไม่เก็บไว้บนเว็บ)</span></div></div>
@@ -287,10 +345,12 @@
       </div>
       <div class="app-chip-grid" id="guideAppList"></div>
     </div>
+   </div>
   </div>
 
   <!-- SUMMARY -->
   <div class="view" id="view-summary">
+   <div class="narrow">
     <h2 class="section-title">สรุปภาพรวมตามสาขา</h2>
     <div class="card table-scroll">
       <table class="summary-table">
@@ -318,11 +378,12 @@
       <strong style="color:var(--ink);">แอปอ้างอิง 14 รายการ (ไม่จำเป็นต้องใช้ครบทุกคน)</strong><br>
       Fund Flow, Selling Agent, Internal Blacklist, BDS web, BDS Main, Fee Payment, AS400 (Prod), E-Form, IBAM, Pinpad Client, CMS (ATM), eKYC, Collection (New), FTP Initialise Parameter
     </div>
+   </div>
   </div>
 
   <!-- ADMIN -->
   <div class="view" id="view-admin">
-    <div id="adminLocked">
+    <div id="adminLocked" style="max-width:420px;">
       <h2 class="section-title">เข้าสู่ระบบผู้ดูแล</h2>
       <div class="card">
         <label>รหัสผ่านผู้ดูแลระบบ</label>
@@ -331,6 +392,8 @@
       </div>
     </div>
     <div id="adminUnlocked" style="display:none;">
+     <div class="two-col">
+      <div class="col-side">
       <h2 class="section-title">ดาวน์โหลดรายงาน</h2>
       <div class="card">
         <button class="btn secondary" id="btnExportMachines" style="margin-bottom:10px;">รายงานเครื่อง (CSV)</button>
@@ -349,13 +412,16 @@
         <button class="btn ghost" id="btnMigrate" style="margin-bottom:10px;">ซ่อมข้อมูลเก่าให้เข้ากับโครงสร้างใหม่</button>
         <button class="btn danger" id="btnWipe">ลบข้อมูลทั้งหมด (เครื่อง + ผู้ใช้ + เช็คอิน)</button>
       </div>
-
+      </div>
+      <div class="col-main">
       <h2 class="section-title">จัดการเครื่อง</h2>
       <div class="card" id="adminMachinesWrap"></div>
       <h2 class="section-title">จัดการผู้ใช้งาน</h2>
       <div class="card" id="adminLogonsWrap"></div>
       <h2 class="section-title">จัดการประวัติเช็คอิน</h2>
       <div class="card" id="adminCheckinsWrap"></div>
+      </div>
+     </div>
     </div>
   </div>
 
@@ -402,14 +468,14 @@ const ADMIN_STEPS = [
     how:'Start &gt; Switch User &gt; Login ด้วย TITN005',
     caution:'ขอรหัสผ่าน Admin จากทีม IT หน้างาน' },
 
-  { label:'ตั้งค่า AS400 (Printer) + สร้าง Shortcut ใหม่ที่ Public Desktop (ลบอันเก่าก่อน)',
-    how:'1. ตั้งค่า AS400PRD หรือ AS400DWH ตาม Session เดิม (Printer)<br>2. ลบ Shortcut เก่าบน Desktop ก่อน<br>3. สร้าง Shortcut ใหม่ไว้ที่ Public Desktop',
-    record:'Path: <code>C:\\Users\\Public\\Desktop</code>',
+  { label:'ตั้งค่า AS400 (Printer) + วาง Shortcut ที่ Public Desktop (ลบอันเก่าก่อน)',
+    how:'1. ตั้งค่า AS400PRD หรือ AS400DWH ตาม Session เดิม (Printer)<br>2. ลบ Shortcut เก่าบน Desktop ก่อน<br>3. ใช้ไฟล์จากโฟลเดอร์ <code>USO-Icon_Shortcut</code> ใน Packet วางที่ Public Desktop',
+    record:'Path ปลายทาง: <code>C:\\Users\\Public\\Desktop</code>',
     caution:'ต้องลบ Shortcut เก่าก่อนสร้างใหม่ เพื่อไม่ให้ซ้ำ · ใช้ Public Desktop เพื่อให้ทุก User เห็น' },
 
-  { label:'Copy Icon SSO ไปที่ Startup folder',
-    how:'Copy shortcut USO Client ไปวางที่ Startup folder',
-    record:'Path: <code>C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup</code>',
+  { label:'วาง Startup Script ที่ Startup folder',
+    how:'ใช้ไฟล์จากโฟลเดอร์ <code>USO-Startup_Script</code> ใน Packet วางที่ Startup folder',
+    record:'Path ปลายทาง: <code>C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup</code>',
     caution:'เพื่อให้ SSO เปิดอัตโนมัติทุกครั้งที่เปิดเครื่อง' },
 
   { label:'ถอนการติดตั้ง (Uninstall) NetIQ',
@@ -418,9 +484,9 @@ const ADMIN_STEPS = [
     how:'Control Panel &gt; Programs &gt; Uninstall &gt; NETIQ SSO',
     caution:'ต้องมั่นใจว่าเก็บข้อมูล User/Password ครบแล้ว "ทุกคน" ที่ใช้เครื่องนี้ (Section 1 ข้อ 2) — เครื่องสาขาส่วนใหญ่มีผู้ใช้งานหลายคน' },
 
-  { label:'ติดตั้ง (Install) USO Client — AllUser',
-    how:'เปิดไฟล์ติดตั้งจาก Path ที่ระบุในหน้าข้อมูลอ้างอิง &gt; Next &gt; Install',
-    caution:'เลือกแบบ AllUser installation · ต้องเป็นเวอร์ชัน 5.6.2.0040-GA-E38 เท่านั้น — เคยพบปัญหาเครื่องช้าและ Log out ไม่ออกจากการลงผิดเวอร์ชัน' },
+  { label:'ติดตั้ง USO Client จากโฟลเดอร์ USO-ClientAgent — AllUser',
+    how:'เปิดโฟลเดอร์ <code>USO-ClientAgent</code> ใน Packet &gt; รันตัวติดตั้ง &gt; Next &gt; Install',
+    caution:'เลือกแบบ AllUser installation · ต้องเป็นเวอร์ชัน 5.6.2.0039-GA-E37 เท่านั้น — เคยพบปัญหาเครื่องช้าและ Log out ไม่ออกจากการลงผิดเวอร์ชัน' },
 
   { label:'รีสตาร์ทเครื่อง (Reboot)',
     how:'Restart computer',
