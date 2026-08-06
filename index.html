@@ -242,6 +242,7 @@
         <div class="chip-btn" data-staff="สุกฤษฎิ์ ชมพูพื้น">สุกฤษฎิ์ ชมพูพื้น</div>
         <div class="chip-btn" data-staff="วรรณภา อัครชาติ">วรรณภา อัครชาติ</div>
         <div class="chip-btn" data-staff="ณฐกร เกริกสกุล">ณฐกร เกริกสกุล</div>
+        <div class="chip-btn" data-staff="วรพล ก่อบุญกวิน">วรพล ก่อบุญกวิน</div>
         <div class="chip-btn" data-staff="__custom">อื่น ๆ</div>
       </div>
       <input type="text" id="customStaff" placeholder="พิมพ์ชื่อผู้ปฏิบัติงาน" style="display:none;">
@@ -707,7 +708,8 @@ function normLogon(id, d){
   };
 }
 function normCheckin(id, d){
-  return { id, staff: d.staff || '(ไม่ระบุ)', branch: d.branch || '', note: d.note || '', ts: Number(d.ts) || 0 };
+  return { id, staff: d.staff || '(ไม่ระบุ)', branch: d.branch || '', note: d.note || '',
+           ts: Number(d.ts) || 0, outTs: Number(d.outTs) || null };
 }
 
 const byNewest = (a,b) => b.createdAt - a.createdAt;
@@ -858,19 +860,32 @@ const isToday = ts => {
   return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
 };
 
+function durationText(inTs, outTs){
+  let mins = Math.round((outTs - inTs) / 60000);
+  if(mins < 0) mins = 0;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h ? (h + ' ชม. ' + (m ? m + ' นาที' : '')).trim() : m + ' นาที';
+}
+
 function renderCheckins(){
   const wrap = $('checkinLogWrap');
   if(!ready.checkins) return;
   if(!checkins.length){ wrap.innerHTML = '<div class="empty"><div class="big">🪪</div>ยังไม่มีการเช็คอิน</div>'; return; }
   const shown = checkins.slice(0, checkinLimit);
-  wrap.innerHTML = shown.map(c => `
+  wrap.innerHTML = shown.map(c => {
+    const out = c.outTs
+      ? `<div class="meta" style="color:var(--green);">ออก ${fmtTime(c.outTs)} · รวม ${durationText(c.ts, c.outTs)}</div>`
+      : `<button class="load-more" style="width:auto; padding:6px 12px; font-size:12px; margin-top:6px;" data-act="checkout" data-id="${c.id}">เช็คเอาท์</button>`;
+    return `
     <div class="checkin-row">
       <div>
         <div class="who">${esc(c.staff)}</div>
         <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''}</div>
+        <div class="meta">เข้า ${fmtTime(c.ts)}</div>
       </div>
-      <div class="meta">${fmtTime(c.ts)}</div>
-    </div>`).join('')
+      <div style="text-align:right; flex-shrink:0;">${out}</div>
+    </div>`;
+  }).join('')
     + (checkins.length > shown.length
         ? `<button class="load-more" data-act="more-checkins">โหลดเพิ่ม (เหลืออีก ${checkins.length - shown.length} รายการ)</button>`
         : '');
@@ -1299,6 +1314,15 @@ document.addEventListener('click', async e => {
   }
   if(act === 'more-machines'){ machineLimit += PAGE; safe('renderMachines', renderMachines); }
   if(act === 'more-checkins'){ checkinLimit += 25; safe('renderCheckins', renderCheckins); }
+  if(act === 'checkout'){
+    const c = checkins.find(x => x.id === id);
+    if(!c) return;
+    if(!confirm('เช็คเอาท์ของ ' + c.staff + ' ที่ ' + c.branch + ' ?')) return;
+    try{
+      await updateDoc(doc(db,'checkins',id), { outTs: Date.now() });
+      toast('เช็คเอาท์แล้ว');
+    }catch(err){ toast('เช็คเอาท์ไม่สำเร็จ: ' + err.message); }
+  }
   if(act === 'photo-open'){ openLightbox(id); }
   if(act === 'photo-del'){
     if(!confirm('ลบรูปนี้?')) return;
@@ -1658,8 +1682,9 @@ $('btnExportLogons').addEventListener('click', async () => {
 
 $('btnExportCheckins').addEventListener('click', () => {
   downloadCsv('uso_checkin_log.csv', [
-    ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน'],
-    ...checkins.map(c => [c.staff, c.branch, c.note, fmtTime(c.ts)])
+    ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน','เวลาเช็คเอาท์','รวมเวลา'],
+    ...checkins.map(c => [c.staff, c.branch, c.note, fmtTime(c.ts),
+      c.outTs ? fmtTime(c.outTs) : '', c.outTs ? durationText(c.ts, c.outTs) : ''])
   ]);
 });
 </script>
