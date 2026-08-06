@@ -1392,6 +1392,26 @@ document.addEventListener('click', async e => {
       toast('ลบแล้ว');
     }catch(err){ toast('ลบไม่สำเร็จ: ' + err.message); }
   }
+  if(act === 'edit-in'){
+    const c = checkins.find(x => x.id === id); if(!c) return;
+    openTimeEditor('แก้เวลาเข้างาน — ' + c.staff, c.ts, async newTs => {
+      if(c.outTs && newTs > c.outTs) return toast('เวลาเข้าต้องไม่เกินเวลาออก');
+      try{ await updateDoc(doc(db,'checkins',id), { ts:newTs }); toast('แก้เวลาเข้าแล้ว'); }
+      catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+    });
+  }
+  if(act === 'edit-out'){
+    const c = checkins.find(x => x.id === id); if(!c) return;
+    openTimeEditor('แก้เวลาออกงาน — ' + c.staff, c.outTs || Date.now(), async newTs => {
+      if(newTs < c.ts) return toast('เวลาออกต้องไม่น้อยกว่าเวลาเข้า');
+      try{ await updateDoc(doc(db,'checkins',id), { outTs:newTs }); toast('แก้เวลาออกแล้ว'); }
+      catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+    }, c.outTs ? { onClear: async () => {
+      if(!confirm('ล้างเวลาออก (กลับเป็นยังไม่เช็คเอาท์)?')) return;
+      try{ await updateDoc(doc(db,'checkins',id), { outTs:null }); toast('ล้างเวลาออกแล้ว'); }
+      catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+    }} : null);
+  }
   if(act === 'del-checkin'){
     if(!confirm('ลบรายการเช็คอินนี้?')) return;
     try{ await deleteDoc(doc(db,'checkins',id)); toast('ลบแล้ว'); }
@@ -1570,6 +1590,55 @@ async function renderUsage(){
   }
 }
 
+/* Local datetime <-> epoch helpers. datetime-local has no timezone, so we read
+   and write in the browser's local time, which is what the staff expect to see. */
+function tsToLocalInput(ts){
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate())
+       + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function localInputToTs(v){
+  const t = new Date(v).getTime();
+  return isNaN(t) ? null : t;
+}
+
+/* A small confirm-style modal with a datetime picker. onClear is optional and
+   shows a "ล้างเวลาออก" button for undoing a check-out. */
+function openTimeEditor(title, ts, onSave, opts){
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox';
+  overlay.style.alignItems = 'center';
+  overlay.innerHTML = `
+    <div style="background:var(--card); border-radius:14px; padding:20px; width:min(360px,90vw); color:var(--ink);">
+      <div style="font-weight:700; font-size:15px; margin-bottom:14px;">${esc(title)}</div>
+      <input type="datetime-local" id="timeEditInput" value="${tsToLocalInput(ts)}"
+             style="width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:15px; font-family:inherit; margin-bottom:16px;">
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="timeEditSave" style="flex:1;">บันทึก</button>
+        <button class="btn ghost" id="timeEditCancel" style="flex:0 0 auto; padding:12px 16px;">ยกเลิก</button>
+      </div>
+      ${opts && opts.onClear ? '<button class="btn danger" id="timeEditClear" style="width:100%; margin-top:8px;">ล้างเวลาออก</button>' : ''}
+    </div>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+  overlay.querySelector('#timeEditCancel').addEventListener('click', close);
+  overlay.querySelector('#timeEditSave').addEventListener('click', async () => {
+    const ns = localInputToTs(overlay.querySelector('#timeEditInput').value);
+    if(ns === null) return toast('รูปแบบเวลาไม่ถูกต้อง');
+    close();
+    await onSave(ns);
+  });
+  if(opts && opts.onClear){
+    overlay.querySelector('#timeEditClear').addEventListener('click', async () => {
+      close();
+      await opts.onClear();
+    });
+  }
+  document.body.appendChild(overlay);
+  overlay.querySelector('#timeEditInput').focus();
+}
+
 function renderAdminLists(){
   $('adminMachinesWrap').innerHTML = machines.length ? machines.map(m => `
     <div class="checkin-row">
@@ -1598,10 +1667,15 @@ function renderAdminLists(){
     </div>`).join('') : '<div class="empty">ยังไม่มีผู้ใช้งานที่โหลดไว้</div>');
 
   $('adminCheckinsWrap').innerHTML = checkins.length ? checkins.map(c => `
-    <div class="checkin-row">
-      <div>
+    <div class="checkin-row" style="align-items:flex-start;">
+      <div style="min-width:0;">
         <div class="who">${esc(c.staff)}</div>
-        <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''} · ${fmtTime(c.ts)}</div>
+        <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''}</div>
+        <div class="meta">เข้า ${fmtTime(c.ts)}${c.outTs ? ' · ออก ' + fmtTime(c.outTs) + ' · รวม ' + durationText(c.ts, c.outTs) : ' · ยังไม่เช็คเอาท์'}</div>
+        <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="detail-btn" data-act="edit-in" data-id="${c.id}">แก้เวลาเข้า</button>
+          <button class="detail-btn" data-act="edit-out" data-id="${c.id}">${c.outTs ? 'แก้เวลาออก' : 'ใส่เวลาออก'}</button>
+        </div>
       </div>
       <div class="row-actions"><button class="delete-btn" data-act="del-checkin" data-id="${c.id}">ลบ</button></div>
     </div>`).join('') : '<div class="empty">ยังไม่มีประวัติเช็คอิน</div>';
