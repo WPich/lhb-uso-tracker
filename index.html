@@ -297,6 +297,7 @@
         </select>
         <select id="mSort">
           <option value="newest">เรียง: ล่าสุด</option>
+          <option value="plandate">เรียง: วันติดตั้ง</option>
           <option value="branch">เรียง: สาขา</option>
           <option value="status">เรียง: สถานะ</option>
         </select>
@@ -405,6 +406,17 @@
 
       <h2 class="section-title">พื้นที่จัดเก็บ</h2>
       <div class="card" id="usageWrap"><div class="loading">กำลังโหลด…</div></div>
+
+      <h2 class="section-title">นำเข้าเครื่องจากแผน</h2>
+      <div class="card">
+        <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:12px;">
+          วางข้อมูลจากไฟล์ CSV แผนติดตั้ง (คอลัมน์: Branch, Computer, Team, Date, Time) แล้วกดนำเข้า<br>
+          ระบบจะข้ามเครื่องที่มีชื่อซ้ำอยู่แล้ว ไม่สร้างซ้ำ
+        </div>
+        <textarea id="importBox" rows="4" placeholder="วางข้อมูล CSV ที่นี่ (คัดลอกจากไฟล์ที่เตรียมให้)"></textarea>
+        <button class="btn secondary" id="btnImport">นำเข้าเครื่อง</button>
+        <div id="importResult" style="font-size:12.5px; margin-top:10px; line-height:1.6;"></div>
+      </div>
 
       <h2 class="section-title">เครื่องมือซ่อมข้อมูล</h2>
       <div class="card">
@@ -580,19 +592,22 @@ const S3 = [
 const SITES = {
   hq: ['HQ','ITSD'],
   branch: [
-    'Lumpini','Terminal 21','One Bangkok','Saphankhwai','The Old Siam','Lotus Rama 4','Centralworld',
-    'Bangrak','Yaowaraj','Park Lane','Worachak','Big C Onnut','The Paseo Mall','Suksawat',
-    'The Crystal Ekamai Ramindra','Tesco Lotus Srinakarin','Sriracha','Central Rama9',
-    'The Mall Bangkapi','Rayong','Fashion Island','FuturePark Rungsit','Nakhonpathom',
-    'The Mall Ngamwongwan','The Mall Thapra','Pak Chong','Terminal 21 Pattaya','Central Rama3',
-    'Kanchanaburi','Samutsakhon','Hua Hin','Big C Bangna','Megabangna','Amata City',
-    'The Mall BangKae','The Circle Ratchapruk','Khonkaen','Central Pinklao','Lotus North Ratchapruek',
-    'Nakhonsawan','Central Westgate','Central Salaya','Ubon Ratchathani','Ayutthaya City Park',
-    'Central Khonkaen','Phitsanulok','UD Town Udonthani','Terminal 21 Korat','Chiangrai',
-    'Big C Hatyai 2','Tesco Lotus Phuket','Hatyai','Tesco Lotus Ruamchok','Big C Hangdong',
-    'Talat Warorot','Home Pro Chachoengsao','Home Pro Chonburi','Phuket','Home Pro Suvarnaphumi',
-    'Home Pro Saraburi','Suratthani','Home Pro Chumphon','Home Pro Chaiyaphum','Home Pro Roiet',
-    'Home Pro Surin','Nakhon Si Thammarat','Home Pro Lampang'
+    'สาขาลุมพินี',
+    'สาขาสะพานควาย','สาขาเทอร์มินอล 21','สาขาดิโอลด์ สยาม','สาขาโลตัส พระราม 4','สาขาวรจักร',
+    'สาขาวัน แบงค็อก','สาขาเดอะมอลล์ บางกะปิ','สาขาสุขสวัสดิ์','สาขาพาร์คเลน เอกมัย','สาขาเยาวราช',
+    'สาขาบางรัก','สาขาบิ๊กซี อ่อนนุช','สาขานครปฐม','สาขาเซ็นทรัล พระราม 3','สาขาบิ๊กซี บางนา',
+    'สาขาเมกาบางนา','สาขาอมตะซิตี้ ชลบุรี','สาขาโลตัส ศรีนครินทร์','สาขาศรีราชา','สาขาระยอง',
+    'สาขาแฟชั่นไอส์แลนด์','สาขาเทอร์มินอล 21 พัทยา','สาขาหัวหิน','สาขาอุบลราชธานี','สาขาอยุธยา ซิตี้พาร์ค',
+    'สาขาเดอะมอลล์ งามวงศ์วาน','สาขาเดอะมอลล์ ท่าพระ','สาขาปากช่อง','สาขาเชียงราย','สาขาเซ็นทรัล พระราม 9',
+    'สาขาฟิวเจอร์พาร์ค รังสิต','สาขากาญจนบุรี','สาขาหาดใหญ่','สาขาเดอะคริสตัล เอกมัย-รามอินทรา',
+    'สาขาเดอะพาซิโอมอลล์ (ลาดกระบัง)','สาขานครสวรรค์','สาขานครศรีธรรมราช','สาขาสมุทรสาคร','สาขาขอนแก่น',
+    'สาขาภูเก็ต','สาขาสุราษฏร์ธานี','สาขาเดอะเซอร์เคิล ราชพฤกษ์','สาขาโลตัส นอร์ธ ราชพฤกษ์',
+    'สาขาโฮมโปร สระบุรี','สาขาโฮมโปร ชุมพร','สาขาพิษณุโลก','สาขาตลาดวโรรส','สาขาบิ๊กซี หาดใหญ่ 2',
+    'สาขาโลตัส ภูเก็ต','สาขาโฮมโปร สุวรรณภูมิ','สาขาโฮมโปร ลำปาง','สาขาเซ็นทรัล ปิ่นเกล้า',
+    'สาขาเซ็นทรัล ศาลายา','สาขาบิ๊กซี หางดง','สาขาเซ็นทรัล ขอนแก่น','สาขาโฮมโปร ชลบุรี',
+    'สาขาพาราไดซ์ พาร์ค','สาขาเทอร์มินอล 21 โคราช','เซ็นทรัล เชียงใหม่','สาขาโฮมโปร ฉะเชิงเทรา',
+    'สาขาโฮมโปร ชัยภูมิ','สาขาโฮมโปร ร้อยเอ็ด','สาขาโฮมโปร สุรินทร์','สาขาเซ็นทรัลเวิลด์',
+    'สาขาเดอะมอลล์ บางแค','สาขาเซ็นทรัล เวสต์เกต','สาขายูดีทาวน์ อุดรธานี','สาขาโลตัส ร่วมโชค'
   ]
 };
 const ALL_SITES = [...SITES.hq, ...SITES.branch];
@@ -689,6 +704,8 @@ function normMachine(id, d){
     logonTotal: Number(d.logonTotal) || 0,
     logonDone: Number(d.logonDone) || 0,
     userNames: Array.isArray(d.userNames) ? d.userNames.filter(x => typeof x === 'string') : [],
+    planDate: d.planDate || '',
+    planTime: d.planTime || '',
     isLegacy: !Array.isArray(d.adminSteps)
   };
 }
@@ -808,6 +825,9 @@ const machineDone = m => m.adminSteps.filter(Boolean).length;
 const logonDone = l => l.section1.filter(Boolean).length + l.section3.filter(Boolean).length;
 function statusOf(done, total){ return done === 0 ? 'notstarted' : done === total ? 'done' : 'progress'; }
 const statusLabel = s => s === 'done' ? 'เสร็จสิ้น' : s === 'progress' ? 'กำลังทำ' : 'ยังไม่เริ่ม';
+/* Reports are exported in English by request. */
+const statusLabelEN = s => s === 'done' ? 'Completed' : s === 'progress' ? 'In progress' : 'Not started';
+const appStatusEN = v => v === 'imported' ? 'Import completed' : v === 'exported' ? 'Export completed' : 'Not used';
 
 /* ---------------- tabs ---------------- */
 document.querySelectorAll('.tab').forEach(tab => {
@@ -860,6 +880,12 @@ const isToday = ts => {
   return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
 };
 
+function durationEN(inTs, outTs){
+  let mins = Math.round((outTs - inTs) / 60000);
+  if(mins < 0) mins = 0;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h ? (h + 'h ' + (m ? m + 'm' : '')).trim() : m + 'm';
+}
 function durationText(inTs, outTs){
   let mins = Math.round((outTs - inTs) / 60000);
   if(mins < 0) mins = 0;
@@ -1015,6 +1041,12 @@ function visibleMachines(){
   if(mFilter.sort === 'branch'){
     list = [...list].sort((a,b) => a.branch.localeCompare(b.branch,'th') ||
                                    a.computer.localeCompare(b.computer,'th'));
+  } else if(mFilter.sort === 'plandate'){
+    // dated machines first, in chronological order; undated ones fall to the end
+    list = [...list].sort((a,b) =>
+      (a.planDate || '9999').localeCompare(b.planDate || '9999') ||
+      (a.planTime || '').localeCompare(b.planTime || '') ||
+      a.branch.localeCompare(b.branch,'th'));
   } else if(mFilter.sort === 'status'){
     list = [...list].sort((a,b) =>
       rank[statusOf(machineDone(a), ADMIN_STEPS.length)] -
@@ -1057,6 +1089,7 @@ function renderMachines(){
         <div>
           <div class="machine-id">${esc(m.computer)}</div>
           <div class="machine-branch">${esc(m.branch)}${m.staff ? ' · ' + esc(m.staff) : ''}</div>
+          ${m.planDate ? `<div class="machine-branch" style="color:var(--teal); font-weight:600;">📅 ${esc(m.planDate)}${m.planTime ? ' · ' + esc(m.planTime) : ''}</div>` : ''}
           ${m.isLegacy ? '<div class="legacy-tag">ข้อมูลเก่า — ใช้ปุ่มซ่อมข้อมูลในหน้าผู้ดูแล</div>' : ''}
         </div>
         <div style="text-align:right; flex-shrink:0;">
@@ -1681,6 +1714,78 @@ function renderAdminLists(){
     </div>`).join('') : '<div class="empty">ยังไม่มีประวัติเช็คอิน</div>';
 }
 
+/* Bulk import from the deployment plan. Parses pasted CSV, skips computers that
+   already exist (so re-running is safe), and writes machines in small batches. */
+function parseCsvLine(line){
+  const out = []; let cur = '', q = false;
+  for(let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if(q){
+      if(ch === '"' && line[i+1] === '"'){ cur += '"'; i++; }
+      else if(ch === '"'){ q = false; }
+      else cur += ch;
+    }else{
+      if(ch === '"') q = true;
+      else if(ch === ',') { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+$('btnImport').addEventListener('click', async () => {
+  const raw = $('importBox').value.trim();
+  const box = $('importResult');
+  if(!raw){ box.innerHTML = '<span style="color:var(--red);">ยังไม่ได้วางข้อมูล</span>'; return; }
+
+  const lines = raw.split(/\r?\n/).filter(l => l.trim());
+  // drop a header row if present
+  if(lines.length && /branch/i.test(lines[0]) && /computer/i.test(lines[0])) lines.shift();
+
+  const existing = new Set(machines.map(m => m.computer.toLowerCase()));
+  const seen = new Set();
+  const toAdd = []; let dup = 0, bad = 0;
+
+  for(const line of lines){
+    const cols = parseCsvLine(line);
+    const [branch, computer, staff, date, time] = cols;
+    if(!branch || !computer){ bad++; continue; }
+    const key = computer.toLowerCase();
+    if(existing.has(key) || seen.has(key)){ dup++; continue; }
+    seen.add(key);
+    toAdd.push({ branch, computer, staff: staff || '', planDate: date || '', planTime: time || '' });
+  }
+
+  if(!toAdd.length){
+    box.innerHTML = `<span style="color:var(--amber);">ไม่มีเครื่องใหม่ให้เพิ่ม — ซ้ำ ${dup} · ข้อมูลไม่ครบ ${bad}</span>`;
+    return;
+  }
+  if(!confirm('นำเข้า ' + toAdd.length + ' เครื่องใหม่?\n(ข้าม ' + dup + ' เครื่องที่มีอยู่แล้ว)')) return;
+
+  $('btnImport').disabled = true;
+  box.innerHTML = 'กำลังนำเข้า…';
+  let ok = 0;
+  try{
+    for(const item of toAdd){
+      await setDoc(doc(db,'machines',uid()), {
+        branch: item.branch, computer: item.computer, staff: item.staff,
+        planDate: item.planDate, planTime: item.planTime,
+        adminSteps: ADMIN_STEPS.map(() => false),
+        createdAt: Date.now(), completedAt: null
+      });
+      ok++;
+      if(ok % 20 === 0) box.innerHTML = 'กำลังนำเข้า… ' + ok + '/' + toAdd.length;
+    }
+    box.innerHTML = `<span style="color:var(--green);">นำเข้าสำเร็จ ${ok} เครื่อง</span> · ข้าม ${dup} ซ้ำ${bad ? ' · ' + bad + ' แถวข้อมูลไม่ครบ' : ''}`;
+    $('importBox').value = '';
+  }catch(e){
+    box.innerHTML = `<span style="color:var(--red);">ผิดพลาดหลังนำเข้า ${ok} เครื่อง: ${esc(e.message)}</span>`;
+  }finally{
+    $('btnImport').disabled = false;
+  }
+});
+
 $('btnMigrate').addEventListener('click', async () => {
   const stale = machines.filter(m => m.isLegacy);
   if(!stale.length) return toast('ไม่พบข้อมูลเก่าที่ต้องซ่อม');
@@ -1722,12 +1827,12 @@ function downloadCsv(filename, rows){
 
 $('btnExportMachines').addEventListener('click', () => {
   downloadCsv('uso_machines_report.csv', [
-    ['สาขา','ชื่อเครื่อง','ผู้รับผิดชอบ','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
-     ...ADMIN_STEPS.map(s => s.label)],
+    ['Branch','Computer Name','Assigned To','Status','Done','Total','Created','Completed',
+     ...ADMIN_STEPS.map((s,i) => 'Admin Step ' + (i+1))],
     ...machines.map(m => [
-      m.branch, m.computer, m.staff, statusLabel(statusOf(machineDone(m), ADMIN_STEPS.length)),
+      m.branch, m.computer, m.staff, statusLabelEN(statusOf(machineDone(m), ADMIN_STEPS.length)),
       machineDone(m), ADMIN_STEPS.length, fmtTime(m.createdAt), fmtTime(m.completedAt),
-      ...m.adminSteps.map(v => v ? 'เสร็จ' : '-')
+      ...m.adminSteps.map(v => v ? 'Done' : '-')
     ])
   ]);
 });
@@ -1742,23 +1847,24 @@ $('btnExportLogons').addEventListener('click', async () => {
     }catch(e){ return toast('โหลดไม่สำเร็จ: ' + e.message); }
   }
   downloadCsv('uso_users_report.csv', [
-    ['สาขา','เครื่อง','ผู้ใช้งาน','สถานะ','เสร็จ','ทั้งหมด','วันที่เพิ่ม','วันที่เสร็จ',
-     ...S1.map(s => 'S1: ' + s.label), ...S3.map(s => 'S3: ' + s.label), ...APPS.map(a => 'App: ' + a)],
+    ['Branch','Computer','User','Status','Done','Total','Created','Completed',
+     ...S1.map((s,i) => 'S1 Step ' + (i+1)), ...S3.map((s,i) => 'S3 Step ' + (i+1)),
+     ...APPS.map(a => 'App: ' + a)],
     ...allLogons().map(l => [
-      l.branch, l.computer, l.userName, statusLabel(statusOf(logonDone(l), LOGON_TOTAL)),
+      l.branch, l.computer, l.userName, statusLabelEN(statusOf(logonDone(l), LOGON_TOTAL)),
       logonDone(l), LOGON_TOTAL, fmtTime(l.createdAt), fmtTime(l.completedAt),
-      ...l.section1.map(v => v ? 'เสร็จ' : '-'),
-      ...l.section3.map(v => v ? 'เสร็จ' : '-'),
-      ...l.apps.map(v => v === 'imported' ? 'Import แล้ว' : v === 'exported' ? 'Export แล้ว' : 'ไม่ใช้งาน')
+      ...l.section1.map(v => v ? 'Done' : '-'),
+      ...l.section3.map(v => v ? 'Done' : '-'),
+      ...l.apps.map(appStatusEN)
     ])
   ]);
 });
 
 $('btnExportCheckins').addEventListener('click', () => {
   downloadCsv('uso_checkin_log.csv', [
-    ['ผู้ปฏิบัติงาน','สาขา','หมายเหตุ','เวลาเช็คอิน','เวลาเช็คเอาท์','รวมเวลา'],
+    ['Staff','Branch','Note','Check-in','Check-out','Duration'],
     ...checkins.map(c => [c.staff, c.branch, c.note, fmtTime(c.ts),
-      c.outTs ? fmtTime(c.outTs) : '', c.outTs ? durationText(c.ts, c.outTs) : ''])
+      c.outTs ? fmtTime(c.outTs) : '', c.outTs ? durationEN(c.ts, c.outTs) : ''])
   ]);
 });
 </script>
