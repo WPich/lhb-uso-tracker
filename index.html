@@ -251,6 +251,17 @@
       <input type="text" id="checkinBranchCustom" placeholder="พิมพ์ชื่อสาขา/ไซต์งาน" style="display:none;">
       <label>หมายเหตุ (ถ้ามี)</label>
       <textarea id="checkinNote" rows="2" placeholder="เช่น เริ่มงาน 09:00, รอ IT support เปิดสิทธิ์"></textarea>
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; margin-bottom:8px;">
+        <input type="checkbox" id="backdateToggle" style="width:17px; height:17px; accent-color:var(--teal);">
+        เช็คอินย้อนหลัง (ลืมกดตอนหน้างาน)
+      </label>
+      <div id="backdateFields" style="display:none;">
+        <label>เวลาเข้างานจริง</label>
+        <input type="datetime-local" id="backdateIn" style="width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; font-family:inherit; margin-bottom:12px;">
+        <label>เวลาออกงาน (ถ้าเลิกงานแล้ว)</label>
+        <input type="datetime-local" id="backdateOut" style="width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14.5px; font-family:inherit; margin-bottom:12px;">
+      </div>
+
       <button class="btn" id="btnCheckin">เช็คอินตอนนี้</button>
     </div>
     </div>
@@ -913,16 +924,39 @@ document.querySelectorAll('#staffChips .chip-btn').forEach(chip => {
 });
 $('customStaff').addEventListener('input', e => selectedStaff = e.target.value.trim());
 
+/* Backdating lets staff record a visit they forgot to log while on site,
+   instead of leaving a gap or waiting for an admin to fix it later. */
+$('backdateToggle').addEventListener('change', e => {
+  const on = e.target.checked;
+  $('backdateFields').style.display = on ? 'block' : 'none';
+  $('btnCheckin').textContent = on ? 'บันทึกย้อนหลัง' : 'เช็คอินตอนนี้';
+  if(on && !$('backdateIn').value) $('backdateIn').value = tsToLocalInput(Date.now());
+});
+
 $('btnCheckin').addEventListener('click', async () => {
   const branch = readBranch('checkinBranchSelect','checkinBranchCustom');
   const note = $('checkinNote').value.trim();
   if(!selectedStaff) return toast('กรุณาเลือกหรือกรอกชื่อผู้ปฏิบัติงาน');
   if(!branch) return toast('กรุณากรอกสาขา/ไซต์งาน');
+
+  let ts = Date.now(), outTs = null;
+  if($('backdateToggle').checked){
+    ts = localInputToTs($('backdateIn').value);
+    if(ts === null) return toast('กรุณาเลือกเวลาเข้างาน');
+    const o = $('backdateOut').value ? localInputToTs($('backdateOut').value) : null;
+    if(o !== null && o < ts) return toast('เวลาออกต้องไม่น้อยกว่าเวลาเข้า');
+    outTs = o;
+  }
+
   try{
-    await setDoc(doc(db,'checkins',uid()), { staff:selectedStaff, branch, note, ts:Date.now() });
+    await setDoc(doc(db,'checkins',uid()), { staff:selectedStaff, branch, note, ts, outTs });
     resetBranch('checkinBranchSelect','checkinBranchCustom');
     $('checkinNote').value = '';
-    toast('เช็คอินสำเร็จ');
+    $('backdateToggle').checked = false;
+    $('backdateFields').style.display = 'none';
+    $('backdateIn').value = ''; $('backdateOut').value = '';
+    $('btnCheckin').textContent = 'เช็คอินตอนนี้';
+    toast(outTs ? 'บันทึกย้อนหลังแล้ว' : 'เช็คอินสำเร็จ');
   }catch(e){ toast('บันทึกไม่สำเร็จ: ' + e.message); }
 });
 
@@ -961,11 +995,16 @@ function renderCheckins(){
       ? `<div class="meta" style="color:var(--green);">ออก ${fmtTime(c.outTs)} · รวม ${durationText(c.ts, c.outTs)}</div>`
       : `<button class="load-more" style="width:auto; padding:6px 12px; font-size:12px; margin-top:6px;" data-act="checkout" data-id="${c.id}">เช็คเอาท์</button>`;
     return `
-    <div class="checkin-row">
-      <div>
+    <div class="checkin-row" style="align-items:flex-start;">
+      <div style="min-width:0;">
         <div class="who">${esc(c.staff)}</div>
         <div class="meta">${esc(c.branch)}${c.note ? ' · ' + esc(c.note) : ''}</div>
         <div class="meta">เข้า ${fmtTime(c.ts)}</div>
+        <div style="margin-top:5px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="detail-btn" data-act="edit-in" data-id="${c.id}">แก้เวลาเข้า</button>
+          <button class="detail-btn" data-act="edit-out" data-id="${c.id}">${c.outTs ? 'แก้เวลาออก' : 'ใส่เวลาออก'}</button>
+          <button class="detail-btn" data-act="edit-note" data-id="${c.id}">แก้สาขา/หมายเหตุ</button>
+        </div>
       </div>
       <div style="text-align:right; flex-shrink:0;">${out}</div>
     </div>`;
@@ -1585,6 +1624,10 @@ document.addEventListener('click', async e => {
       catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
     }} : null);
   }
+  if(act === 'edit-note'){
+    const c = checkins.find(x => x.id === id); if(!c) return;
+    openCheckinEditor(c);
+  }
   if(act === 'del-checkin'){
     if(!confirm('ลบรายการเช็คอินนี้?')) return;
     try{ await deleteDoc(doc(db,'checkins',id)); toast('ลบแล้ว'); }
@@ -1778,6 +1821,59 @@ function localInputToTs(v){
 
 /* A small confirm-style modal with a datetime picker. onClear is optional and
    shows a "ล้างเวลาออก" button for undoing a check-out. */
+/* Lets staff correct the branch or note on a check-in they already saved. */
+function openCheckinEditor(c){
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox';
+  overlay.style.alignItems = 'center';
+  overlay.innerHTML = `
+    <div style="background:var(--card); border-radius:14px; padding:20px; width:min(380px,92vw); color:var(--ink); max-height:88vh; overflow:auto;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:14px;">แก้ข้อมูลเช็คอิน — ${esc(c.staff)}</div>
+      <label>สาขา / ไซต์งาน</label>
+      <select id="ceBranch"></select>
+      <input type="text" id="ceBranchCustom" placeholder="พิมพ์ชื่อสาขา" style="display:none;">
+      <label>หมายเหตุ</label>
+      <textarea id="ceNote" rows="2" placeholder="เช่น เริ่มงาน 09:00">${esc(c.note)}</textarea>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="ceSave" style="flex:1;">บันทึก</button>
+        <button class="btn ghost" id="ceCancel" style="flex:0 0 auto; padding:12px 16px;">ยกเลิก</button>
+      </div>
+    </div>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+  document.body.appendChild(overlay);
+
+  const sel = overlay.querySelector('#ceBranch');
+  const custom = overlay.querySelector('#ceBranchCustom');
+  sel.innerHTML = branchOptionsHtml();
+  /* Branches typed by hand in the past are not in the master list, so fall back
+     to the custom box instead of silently dropping the existing value. */
+  if(ALL_SITES.includes(c.branch)){
+    sel.value = c.branch;
+  }else{
+    sel.value = '__custom';
+    custom.style.display = 'block';
+    custom.value = c.branch;
+  }
+  sel.addEventListener('change', () => {
+    const on = sel.value === '__custom';
+    custom.style.display = on ? 'block' : 'none';
+    if(on) custom.focus(); else custom.value = '';
+  });
+
+  overlay.querySelector('#ceCancel').addEventListener('click', close);
+  overlay.querySelector('#ceSave').addEventListener('click', async () => {
+    const branch = sel.value === '__custom' ? custom.value.trim() : sel.value;
+    if(!branch) return toast('กรุณาเลือกหรือกรอกสาขา');
+    const note = overlay.querySelector('#ceNote').value.trim();
+    close();
+    try{
+      await updateDoc(doc(db,'checkins',c.id), { branch, note });
+      toast('แก้ข้อมูลแล้ว');
+    }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+  });
+}
+
 function openTimeEditor(title, ts, onSave, opts){
   const overlay = document.createElement('div');
   overlay.className = 'lightbox';
