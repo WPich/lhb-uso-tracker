@@ -283,9 +283,9 @@
     <h2 class="section-title">เพิ่มเครื่องใหม่</h2>
     <div class="card">
       <div style="background:var(--amber-bg); border:1.5px solid var(--amber); border-radius:9px; padding:10px 12px; margin-bottom:14px; font-size:11.8px; color:var(--amber); line-height:1.55;">
-        <strong>แผนในระบบยังไม่ครบ</strong><br>
-        ขณะนี้มี 247 เครื่อง แต่แผนล่าสุด (as of 10/08/2026) มี 264 เครื่อง<br>
-        ถ้าหาเครื่องที่ต้องทำไม่เจอ ให้ใช้ "เพิ่มเครื่องเอง (ไม่อยู่ในแผน)" ไปก่อน
+        <strong>หาเครื่องไม่เจอในวันที่เลือก?</strong><br>
+        ถ้าแผนเลื่อนวัน ให้พิมพ์ชื่อเครื่องหรือชื่อสาขาในช่อง "ค้นหา / กรอง" ด้านล่าง แล้วกด "+ เพิ่มเครื่องนี้"<br>
+        ถ้าไม่อยู่ในแผนเลย ให้ใช้ "เพิ่มเครื่องเอง (ไม่อยู่ในแผน)"
       </div>
 
       <label>วันที่ติดตั้ง (ตามแผน)</label>
@@ -1224,6 +1224,42 @@ function visibleMachines(){
   return list; // 'newest' keeps the createdAt-desc order from the snapshot
 }
 
+/* Plan entries not yet registered that match the search text, so a machine can be
+   found by name or branch even after its install date was moved. One row per
+   computer, latest plan date wins. */
+function planMatches(q){
+  if(!q) return [];
+  const taken = new Set(machines.map(m => m.computer.toLowerCase()));
+  const terms = q.split(/\s+/).filter(Boolean);
+  const best = new Map();
+  PLAN.forEach(p => {
+    const k = p.c.toLowerCase();
+    if(taken.has(k)) return;
+    if(mFilter.branch !== 'all' && p.b !== mFilter.branch) return;
+    const hay = (p.c + ' ' + p.b + ' ' + p.s).toLowerCase();
+    if(!terms.every(t => hay.includes(t))) return;
+    const cur = best.get(k);
+    if(!cur || p.d > cur.d) best.set(k, p);
+  });
+  return [...best.values()].sort((a,b) => a.d.localeCompare(b.d) || a.c.localeCompare(b.c));
+}
+function planMatchesHtml(list){
+  if(!list.length) return '';
+  return `<div class="section-divider" style="margin-top:4px;">อยู่ในแผนแต่ยังไม่ได้เพิ่มเข้าระบบ (${list.length})</div>`
+    + list.slice(0, 50).map(p => `
+    <div class="machine-card" style="border-style:dashed;">
+      <div class="machine-head" style="cursor:default;">
+        <div>
+          <div class="machine-id">${esc(p.c)}</div>
+          <div class="machine-branch">${esc(p.b)}${p.s ? ' · ' + esc(p.s) : ''}</div>
+          <div class="machine-branch" style="color:var(--teal); font-weight:600;">📅 แผน ${esc(thDate(p.d))}${p.t ? ' · ' + esc(p.t) : ''}</div>
+        </div>
+        <button type="button" class="check-all-btn" data-act="add-plan" data-c="${esc(p.c)}">+ เพิ่มเครื่องนี้</button>
+      </div>
+    </div>`).join('')
+    + (list.length > 50 ? `<div class="empty" style="padding:10px;">แสดง 50 รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</div>` : '');
+}
+
 function renderMachines(){
   const wrap = $('machinesWrap');
   if(!ready.machines) return;
@@ -1236,12 +1272,15 @@ function renderMachines(){
   syncBranchFilter();
   const all = visibleMachines();
   const shown = all.slice(0, machineLimit);
+  const pm = planMatches(mFilter.q.trim().toLowerCase());
   $('mCount').textContent = all.length === machines.length
     ? `แสดง ${shown.length} จาก ${machines.length} เครื่อง`
     : `พบ ${all.length} เครื่อง (จากทั้งหมด ${machines.length}) · แสดง ${shown.length}`;
 
+  if(pm.length) $('mCount').textContent += ` · อยู่ในแผนยังไม่ได้เพิ่ม ${pm.length}`;
   if(!all.length){
-    wrap.innerHTML = '<div class="empty"><div class="big">🔍</div>ไม่พบเครื่องที่ตรงกับเงื่อนไข<br>ลองแก้คำค้นหรือล้างตัวกรอง</div>';
+    wrap.innerHTML = pm.length ? planMatchesHtml(pm)
+      : '<div class="empty"><div class="big">🔍</div>ไม่พบเครื่องที่ตรงกับเงื่อนไข<br>ลองแก้คำค้นหรือล้างตัวกรอง</div>';
     return;
   }
 
@@ -1304,7 +1343,8 @@ function renderMachines(){
   }).join('')
   + (all.length > shown.length
       ? `<button class="load-more" data-act="more-machines">โหลดเพิ่ม (เหลืออีก ${all.length - shown.length} เครื่อง)</button>`
-      : '');
+      : '')
+  + planMatchesHtml(pm);
   window.scrollTo(0, y);
 }
 
@@ -1529,6 +1569,23 @@ document.addEventListener('click', async e => {
   if(!el) return;
   const { act, id } = el.dataset;
 
+  if(act === 'add-plan'){
+    const c = el.dataset.c;
+    if(machines.some(m => m.computer.toLowerCase() === c.toLowerCase())) return toast('มีเครื่อง ' + c + ' อยู่ในระบบแล้ว');
+    const cands = PLAN.filter(x => x.c === c).sort((a,b) => b.d.localeCompare(a.d));
+    const p = cands[0]; if(!p) return toast('ไม่พบเครื่องนี้ในแผน');
+    if(!confirm('เพิ่มเครื่อง ' + c + ' (' + p.b + ') เข้าระบบ?')) return;
+    try{
+      await setDoc(doc(db,'machines',uid()), {
+        branch: p.b, computer: p.c, staff: p.s, planDate: p.d, planTime: p.t, remark: '',
+        adminSteps: ADMIN_STEPS.map(()=>false),
+        createdAt: Date.now(), completedAt: null
+      });
+      refreshPlanComputers();
+      toast('เพิ่มเครื่อง ' + c + ' แล้ว');
+    }catch(err){ toast('บันทึกไม่สำเร็จ: ' + err.message); }
+    return;
+  }
   if(act === 'admin-all'){
     const m = machines.find(x => x.id === id); if(!m) return;
     const allOn = m.adminSteps.every(Boolean);
